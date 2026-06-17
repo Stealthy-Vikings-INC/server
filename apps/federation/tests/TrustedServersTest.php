@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OCA\Federation\Tests;
 
 use OCA\Federation\BackgroundJob\RequestSharedSecret;
@@ -120,15 +121,15 @@ class TrustedServersTest extends TestCase {
 
 	public function testRemoveServer(): void {
 		$id = 42;
-		$server = ['url_hash' => 'url_hash'];
+		$server = ['url' => 'url', 'url_hash' => 'url_hash'];
 		$this->dbHandler->expects($this->once())->method('removeServer')->with($id);
 		$this->dbHandler->expects($this->once())->method('getServerById')->with($id)
 			->willReturn($server);
 		$this->dispatcher->expects($this->once())->method('dispatchTyped')
 			->willReturnCallback(
 				function ($event): void {
-					$this->assertSame(get_class($event), TrustedServerRemovedEvent::class);
-					/** @var \OCP\Federated\Events\TrustedServerRemovedEvent $event */
+					$this->assertInstanceOf(TrustedServerRemovedEvent::class, $event);
+					$this->assertSame('url', $event->getUrl());
 					$this->assertSame('url_hash', $event->getUrlHash());
 				}
 			);
@@ -144,6 +145,64 @@ class TrustedServersTest extends TestCase {
 		);
 	}
 
+	public static function dataTestGetServer() {
+		return [
+			[
+				15,
+				[
+					'id' => 15,
+					'otherData' => 'first server',
+				]
+			],
+			[
+				16,
+				[
+					'id' => 16,
+					'otherData' => 'second server',
+				]
+			],
+			[
+				42,
+				[
+					'id' => 42,
+					'otherData' => 'last server',
+				]
+			],
+			[
+				108,
+				null
+			],
+		];
+	}
+
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestGetServer')]
+	public function testGetServer(int $id, ?array $expectedServer): void {
+		$servers = [
+			[
+				'id' => 15,
+				'otherData' => 'first server',
+			],
+			[
+				'id' => 16,
+				'otherData' => 'second server',
+			],
+			[
+				'id' => 42,
+				'otherData' => 'last server',
+			],
+		];
+		$this->dbHandler->expects($this->once())->method('getAllServer')->willReturn($servers);
+
+		if ($expectedServer === null) {
+			$this->expectException(\Exception::class);
+			$this->expectExceptionMessage('No server found with ID: ' . $id);
+		}
+
+		$this->assertEquals(
+			$expectedServer,
+			$this->trustedServers->getServer($id)
+		);
+	}
 
 	public function testIsTrustedServer(): void {
 		$this->dbHandler->expects($this->once())
@@ -170,7 +229,7 @@ class TrustedServersTest extends TestCase {
 		);
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestIsNextcloudServer')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestIsNextcloudServer')]
 	public function testIsNextcloudServer(int $statusCode, bool $isValidNextcloudVersion, bool $expected): void {
 		$server = 'server1';
 
@@ -237,7 +296,7 @@ class TrustedServersTest extends TestCase {
 		$this->assertFalse($this->trustedServers->isNextcloudServer($server));
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestCheckNextcloudVersion')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestCheckNextcloudVersion')]
 	public function testCheckNextcloudVersion(string $status): void {
 		$this->assertTrue(self::invokePrivate($this->trustedServers, 'checkNextcloudVersion', [$status]));
 	}
@@ -249,7 +308,7 @@ class TrustedServersTest extends TestCase {
 		];
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestCheckNextcloudVersionTooLow')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestCheckNextcloudVersionTooLow')]
 	public function testCheckNextcloudVersionTooLow(string $status): void {
 		$this->expectException(HintException::class);
 		$this->expectExceptionMessage('Remote server version is too low. 9.0 is required.');
@@ -263,7 +322,7 @@ class TrustedServersTest extends TestCase {
 		];
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('dataTestUpdateProtocol')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataTestUpdateProtocol')]
 	public function testUpdateProtocol(string $url, string $expected): void {
 		$this->assertSame($expected,
 			self::invokePrivate($this->trustedServers, 'updateProtocol', [$url])

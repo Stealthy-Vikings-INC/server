@@ -5,6 +5,7 @@
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OC;
 
 use OC\Files\Filesystem;
@@ -14,7 +15,9 @@ use OCP\Files\InvalidPathException;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotFoundException;
 use OCP\Files\NotPermittedException;
+use OCP\IDateTimeZone;
 use OCP\IRequest;
+use OCP\Server;
 use ownCloud\TarStreamer\TarStreamer;
 use Psr\Log\LoggerInterface;
 use ZipStreamer\ZipStreamer;
@@ -40,7 +43,12 @@ class Streamer {
 	 * @param int $numberOfFiles The number of files (and directories) that will
 	 *                           be included in the streamed file
 	 */
-	public function __construct(IRequest|bool $preferTar, int|float $size, int $numberOfFiles) {
+	public function __construct(
+		IRequest|bool $preferTar,
+		int|float $size,
+		int $numberOfFiles,
+		private IDateTimeZone $timezoneFactory,
+	) {
 		if ($preferTar instanceof IRequest) {
 			$preferTar = self::isUserAgentPreferTar($preferTar);
 		}
@@ -110,13 +118,13 @@ class Streamer {
 		// prevent absolute dirs
 		$internalDir = ltrim($internalDir, '/');
 
-		$userFolder = \OC::$server->get(IRootFolder::class)->get(Filesystem::getRoot());
+		$userFolder = Server::get(IRootFolder::class)->get(Filesystem::getRoot());
 		/** @var Folder $dirNode */
 		$dirNode = $userFolder->get($dir);
 		$files = $dirNode->getDirectoryListing();
 
 		/** @var LoggerInterface $logger */
-		$logger = \OC::$server->query(LoggerInterface::class);
+		$logger = Server::get(LoggerInterface::class);
 		foreach ($files as $file) {
 			if ($file instanceof File) {
 				try {
@@ -156,7 +164,7 @@ class Streamer {
 		$options = [];
 		if ($time) {
 			$options = [
-				'timestamp' => $time
+				'timestamp' => $this->fixTimestamp($time),
 			];
 		}
 
@@ -170,11 +178,16 @@ class Streamer {
 	/**
 	 * Add an empty directory entry to the archive.
 	 *
-	 * @param string $dirName Directory Path and name to be added to the archive.
-	 * @return bool $success
+	 * @param $dirName - Directory Path and name to be added to the archive.
+	 * @param $timestamp - Modification time of the directory (defaults to current time)
 	 */
-	public function addEmptyDir($dirName) {
-		return $this->streamerInstance->addEmptyDir($dirName);
+	public function addEmptyDir(string $dirName, int $timestamp = 0): bool {
+		$options = null;
+		if ($timestamp > 0) {
+			$options = ['timestamp' => $this->fixTimestamp($timestamp)];
+		}
+
+		return $this->streamerInstance->addEmptyDir($dirName, $options);
 	}
 
 	/**
@@ -185,5 +198,15 @@ class Streamer {
 	 */
 	public function finalize() {
 		return $this->streamerInstance->finalize();
+	}
+
+	private function fixTimestamp(int $timestamp): int {
+		if ($this->streamerInstance instanceof ZipStreamer) {
+			// Zip does not support any timezone information
+			// while tar is interpreted as Unix time the Zip time is interpreted as local time of the user...
+			$zone = $this->timezoneFactory->getTimeZone($timestamp);
+			$timestamp += $zone->getOffset(new \DateTimeImmutable('@' . (string)$timestamp));
+		}
+		return $timestamp;
 	}
 }

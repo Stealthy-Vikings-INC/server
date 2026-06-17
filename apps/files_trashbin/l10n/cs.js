@@ -12,7 +12,6 @@ OC.L10N.register(
     "Confirm permanent deletion" : "Potvrdit nevratné smazání",
     "Are you sure you want to permanently delete all files and folders in the trash? This cannot be undone." : "Opravdu chcete nevratně smazat veškeré soubory a složky v koši? Toto nelze vzít zpět!",
     "Cancel" : "Storno",
-    "Deletion cancelled" : "Mazání zrušeno",
     "Original location" : "Původní umístění",
     "Deleted by" : "Smazal(a)",
     "Deleted" : "Smazáno",

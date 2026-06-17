@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2017 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OC\Mail;
 
 use OCP\Defaults;
@@ -190,32 +191,46 @@ EOF;
 				<tr style="padding:0;text-align:left;vertical-align:top">
 					<th style="Margin:0;color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;line-height:1.3;margin:0;padding:0;text-align:left">
 						<center data-parsed="" style="min-width:490px;width:100%%">
-							<table class="button btn default primary float-center" style="Margin:0 0 30px 0;border-collapse:collapse;border-spacing:0;display:inline-block;float:none;margin:0 0 30px 0;margin-right:15px;border-radius:8px;max-width:300px;padding:0;text-align:center;vertical-align:top;width:auto;background:%1\$s;background-color:%1\$s;color:#fefefe;">
-								<tr style="padding:0;text-align:left;vertical-align:top">
-									<td style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0;border-collapse:collapse!important;color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;hyphens:auto;line-height:normal;margin:0;padding:0;text-align:left;vertical-align:top;word-wrap:break-word">
-										<table style="border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%%">
+							<!--[if (gte mso 9)|(IE)]>
+							<table>
+								<tr>
+									<td>
+									<![endif]-->
+										<table class="button btn default primary float-center" style="Margin:0 0 30px 0;border-collapse:collapse;border-spacing:0;display:inline-block;float:none;margin:0 0 30px 0;margin-right:15px;border-radius:8px;max-width:300px;padding:0;text-align:center;vertical-align:top;width:auto;background:%1\$s;background-color:%1\$s;color:#fefefe;">
 											<tr style="padding:0;text-align:left;vertical-align:top">
-												<td style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0;border:0 solid %2\$s;border-collapse:collapse!important;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;hyphens:auto;line-height:normal;margin:0;padding:0;text-align:left;vertical-align:top;word-wrap:break-word">
-													<a href="%3\$s" style="Margin:0;border:0 solid %4\$s;color:%5\$s;display:inline-block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:regular;line-height:normal;margin:0;padding:8px;text-align:left;outline:1px solid %6\$s;text-decoration:none">%7\$s</a>
+												<td style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0;border-collapse:collapse!important;color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;hyphens:auto;line-height:normal;margin:0;padding:0;text-align:left;vertical-align:top;word-wrap:break-word">
+													<table style="border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%%">
+														<tr style="padding:0;text-align:left;vertical-align:top">
+															<td style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0;border:0 solid %2\$s;border-collapse:collapse!important;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;hyphens:auto;line-height:normal;margin:0;padding:0;text-align:left;vertical-align:top;word-wrap:break-word">
+																<a href="%3\$s" style="Margin:0;border:0 solid %4\$s;color:%5\$s;display:inline-block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:regular;line-height:normal;margin:0;padding:8px;text-align:left;outline:1px solid %6\$s;text-decoration:none">%7\$s</a>
+															</td>
+														</tr>
+													</table>
 												</td>
 											</tr>
 										</table>
+									<!--[if (gte mso 9)|(IE)]>
 									</td>
-								</tr>
-							</table>
-							<table class="button btn default secondary float-center" style="Margin:0 0 30px 0;border-collapse:collapse;border-spacing:0;display:inline-block;float:none;background-color: #ccc;margin:0 0 30px 0;max-height:40px;max-width:300px;padding:1px;border-radius:8px;text-align:center;vertical-align:top;width:auto">
-								<tr style="padding:0;text-align:left;vertical-align:top">
-									<td style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0;border-collapse:collapse!important;color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;hyphens:auto;line-height:normal;margin:0;padding:0;text-align:left;vertical-align:top;word-wrap:break-word">
-										<table style="border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%%">
+									<td>
+									<![endif]-->
+										<table class="button btn default secondary float-center" style="Margin:0 0 30px 0;border-collapse:collapse;border-spacing:0;display:inline-block;float:none;background-color: #ccc;margin:0 0 30px 0;max-height:40px;max-width:300px;padding:1px;border-radius:8px;text-align:center;vertical-align:top;width:auto">
 											<tr style="padding:0;text-align:left;vertical-align:top">
-												<td style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0;border:0 solid #777;border-collapse:collapse!important;color:#fefefe;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;hyphens:auto;line-height:normal;margin:0;padding:0;text-align:left;vertical-align:top;word-wrap:break-word">
-													<a href="%8\$s" style="Margin:0;background-color:#fff;border:0 solid #777;color:#6C6C6C!important;display:inline-block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:regular;line-height:normal;margin:0;border-radius: 7px;padding:8px;text-align:left;text-decoration:none">%9\$s</a>
+												<td style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0;border-collapse:collapse!important;color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;hyphens:auto;line-height:normal;margin:0;padding:0;text-align:left;vertical-align:top;word-wrap:break-word">
+													<table style="border-collapse:collapse;border-spacing:0;padding:0;text-align:left;vertical-align:top;width:100%%">
+														<tr style="padding:0;text-align:left;vertical-align:top">
+															<td style="-moz-hyphens:auto;-webkit-hyphens:auto;Margin:0;border:0 solid #777;border-collapse:collapse!important;color:#fefefe;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;hyphens:auto;line-height:normal;margin:0;padding:0;text-align:left;vertical-align:top;word-wrap:break-word">
+																<a href="%8\$s" style="Margin:0;background-color:#fff;border:0 solid #777;color:#6C6C6C!important;display:inline-block;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:regular;line-height:normal;margin:0;border-radius: 7px;padding:8px;text-align:left;text-decoration:none">%9\$s</a>
+															</td>
+														</tr>
+													</table>
 												</td>
 											</tr>
 										</table>
+									<!--[if (gte mso 9)|(IE)]>
 									</td>
 								</tr>
 							</table>
+							<![endif]-->
 						</center>
 					</th>
 					<th class="expander" style="Margin:0;color:#0a0a0a;font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Oxygen-Sans,Ubuntu,Cantarell,'Helvetica Neue',Arial,sans-serif;font-size:16px;font-weight:400;line-height:1.3;margin:0;padding:0!important;text-align:left;visibility:hidden;width:0"></th>
@@ -319,6 +334,7 @@ EOF;
 	/**
 	 * Sets the subject of the email
 	 */
+	#[\Override]
 	public function setSubject(string $subject): void {
 		$this->subject = $subject;
 	}
@@ -326,6 +342,7 @@ EOF;
 	/**
 	 * Adds a header to the email
 	 */
+	#[\Override]
 	public function addHeader(): void {
 		if ($this->headerAdded) {
 			return;
@@ -348,6 +365,7 @@ EOF;
 	 * @param string|bool $plainTitle Title that is used in the plain text email
 	 *                                if empty the $title is used, if false none will be used
 	 */
+	#[\Override]
 	public function addHeading(string $title, $plainTitle = ''): void {
 		if ($this->footerAdded) {
 			return;
@@ -381,6 +399,7 @@ EOF;
 	 * @param string|bool $plainText Text that is used in the plain text email
 	 *                               if empty the $text is used, if false none will be used
 	 */
+	#[\Override]
 	public function addBodyText(string $text, $plainText = ''): void {
 		if ($this->footerAdded) {
 			return;
@@ -412,6 +431,7 @@ EOF;
 	 * @param integer $plainIndent plainIndent If > 0, Indent plainText by this amount.
 	 * @since 12.0.0
 	 */
+	#[\Override]
 	public function addBodyListItem(
 		string $text,
 		string $metaInfo = '',
@@ -498,6 +518,7 @@ EOF;
 	 * @param string $plainTextLeft Text of left button that is used in the plain text version - if unset the $textLeft is used
 	 * @param string $plainTextRight Text of right button that is used in the plain text version - if unset the $textRight is used
 	 */
+	#[\Override]
 	public function addBodyButtonGroup(
 		string $textLeft,
 		string $urlLeft,
@@ -540,6 +561,7 @@ EOF;
 	 *
 	 * @since 12.0.0
 	 */
+	#[\Override]
 	public function addBodyButton(string $text, string $url, $plainText = ''): void {
 		if ($this->footerAdded) {
 			return;
@@ -583,6 +605,7 @@ EOF;
 	 *
 	 * @param string $text If the text is empty the default "Name - Slogan<br>This is an automatically sent email" will be used
 	 */
+	#[\Override]
 	public function addFooter(string $text = '', ?string $lang = null): void {
 		if ($text === '') {
 			$l10n = $this->l10nFactory->get('lib', $lang);
@@ -609,6 +632,7 @@ EOF;
 	/**
 	 * Returns the rendered email subject as string
 	 */
+	#[\Override]
 	public function renderSubject(): string {
 		return $this->subject;
 	}
@@ -616,6 +640,7 @@ EOF;
 	/**
 	 * Returns the rendered HTML email as string
 	 */
+	#[\Override]
 	public function renderHtml(): string {
 		if (!$this->footerAdded) {
 			$this->footerAdded = true;
@@ -628,6 +653,7 @@ EOF;
 	/**
 	 * Returns the rendered plain text email as string
 	 */
+	#[\Override]
 	public function renderText(): string {
 		if (!$this->footerAdded) {
 			$this->footerAdded = true;

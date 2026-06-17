@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2025 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\DAV\Tests\unit\Upload;
 
 use Generator;
@@ -20,10 +21,28 @@ use Sabre\HTTP\ResponseInterface;
 use Test\TestCase;
 
 class UploadAutoMkcolPluginTest extends TestCase {
-
 	private Tree&MockObject $tree;
 	private RequestInterface&MockObject $request;
 	private ResponseInterface&MockObject $response;
+
+	private UploadAutoMkcolPlugin $plugin;
+
+	protected function setUp(): void {
+		parent::setUp();
+
+		$server = $this->createMock(Server::class);
+		$this->tree = $this->createMock(Tree::class);
+
+		$server->tree = $this->tree;
+		$this->plugin = new UploadAutoMkcolPlugin();
+
+		$this->request = $this->createMock(RequestInterface::class);
+		$this->response = $this->createMock(ResponseInterface::class);
+		$server->httpRequest = $this->request;
+		$server->httpResponse = $this->response;
+
+		$this->plugin->initialize($server);
+	}
 
 	public static function dataMissingHeaderShouldReturnTrue(): Generator {
 		yield 'missing X-NC-WebDAV-Auto-Mkcol header' => [null];
@@ -50,7 +69,7 @@ class UploadAutoMkcolPluginTest extends TestCase {
 		$this->assertTrue($return);
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('dataMissingHeaderShouldReturnTrue')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataMissingHeaderShouldReturnTrue')]
 	public function testBeforeMethodWithMissingHeaderShouldReturnTrue(?string $header): void {
 		$this->request->expects(self::once())
 			->method('getHeader')
@@ -112,22 +131,5 @@ class UploadAutoMkcolPluginTest extends TestCase {
 
 		$return = $this->plugin->beforeMethod($this->request, $this->response);
 		self::assertTrue($return);
-	}
-
-	protected function setUp(): void {
-		parent::setUp();
-
-		$server = $this->createMock(Server::class);
-		$this->tree = $this->createMock(Tree::class);
-
-		$server->tree = $this->tree;
-		$this->plugin = new UploadAutoMkcolPlugin();
-
-		$this->request = $this->createMock(RequestInterface::class);
-		$this->response = $this->createMock(ResponseInterface::class);
-		$server->httpRequest = $this->request;
-		$server->httpResponse = $this->response;
-
-		$this->plugin->initialize($server);
 	}
 }

@@ -14,10 +14,8 @@ use OCP\App\IAppManager;
 use OCP\Config\Exceptions\TypeConflictException;
 use OCP\Config\IUserConfig;
 use OCP\Config\Lexicon\Entry;
-use OCP\Config\Lexicon\Preset;
 use OCP\Config\ValueType;
 use OCP\IAppConfig;
-use OCP\IConfig;
 use OCP\Server;
 use Psr\Log\LoggerInterface;
 
@@ -27,18 +25,20 @@ use Psr\Log\LoggerInterface;
  * @since 32.0.0
  */
 class ConfigManager {
-	/** @since 32.0.0 */
-	public const PRESET_CONFIGKEY = 'config_preset';
-
 	/** @var AppConfig|null $appConfig */
 	private ?IAppConfig $appConfig = null;
 	/** @var UserConfig|null $userConfig */
 	private ?IUserConfig $userConfig = null;
 
 	public function __construct(
-		private readonly IConfig $config,
 		private readonly LoggerInterface $logger,
 	) {
+	}
+
+	public function clearConfigCaches(): void {
+		$this->loadConfigServices();
+		$this->appConfig->clearCache();
+		$this->userConfig->clearCacheAll();
 	}
 
 	/**
@@ -82,14 +82,42 @@ class ConfigManager {
 	}
 
 	/**
-	 * store in config.php the new preset
-	 * refresh cached preset
+	 * Upgrade stored data in case of changes in the lexicon.
+	 * Heavy process to be executed on core and app upgrade.
 	 */
-	public function setLexiconPreset(Preset $preset): void {
-		$this->config->setSystemValue(self::PRESET_CONFIGKEY, $preset->value);
+	public function updateLexiconEntries(string $appId): void {
 		$this->loadConfigServices();
-		$this->appConfig->clearCache();
-		$this->userConfig->clearCacheAll();
+		$this->updateLexiconAppConfigEntries($appId);
+		$this->updateLexiconUserConfigEntries($appId);
+	}
+
+	/**
+	 * Apply modification on the lexicon to the stored app config values:
+	 *
+	 * - Upgrade AppConfig entries if set as lazy/not-lazy
+	 */
+	private function updateLexiconAppConfigEntries(string $appId): void {
+		$lexicon = $this->appConfig->getConfigDetailsFromLexicon($appId);
+		foreach ($lexicon['entries'] as $entry) {
+			// update laziness
+			$this->appConfig->updateLazy($appId, $entry->getKey(), $entry->isLazy());
+		}
+	}
+
+	/**
+	 * Apply modification on the lexicon to the stored user preferences values:
+	 *
+	 * - Upgrade UserConfig entries if set as indexed/not-indexed
+	 * - Upgrade UserConfig entries if set as lazy/not-lazy
+	 */
+	private function updateLexiconUserConfigEntries(string $appId): void {
+		$lexicon = $this->userConfig->getConfigDetailsFromLexicon($appId);
+		foreach ($lexicon['entries'] as $entry) {
+			// upgrade based on index flag
+			$this->userConfig->updateGlobalIndexed($appId, $entry->getKey(), $entry->isFlagged(IUserConfig::FLAG_INDEXED));
+			// update laziness
+			$this->userConfig->updateGlobalLazy($appId, $entry->getKey(), $entry->isLazy());
+		}
 	}
 
 	/**
@@ -161,7 +189,6 @@ class ConfigManager {
 		}
 	}
 
-
 	/**
 	 * converting value from rename to the new key
 	 *
@@ -173,19 +200,15 @@ class ConfigManager {
 			case ValueType::STRING:
 				$this->appConfig->setValueString($appId, $entry->getKey(), $value);
 				return;
-
 			case ValueType::INT:
 				$this->appConfig->setValueInt($appId, $entry->getKey(), $this->convertToInt($value));
 				return;
-
 			case ValueType::FLOAT:
 				$this->appConfig->setValueFloat($appId, $entry->getKey(), $this->convertToFloat($value));
 				return;
-
 			case ValueType::BOOL:
 				$this->appConfig->setValueBool($appId, $entry->getKey(), $this->convertToBool($value, $entry));
 				return;
-
 			case ValueType::ARRAY:
 				$this->appConfig->setValueArray($appId, $entry->getKey(), $this->convertToArray($value));
 				return;
@@ -203,19 +226,15 @@ class ConfigManager {
 			case ValueType::STRING:
 				$this->userConfig->setValueString($userId, $appId, $entry->getKey(), $value);
 				return;
-
 			case ValueType::INT:
 				$this->userConfig->setValueInt($userId, $appId, $entry->getKey(), $this->convertToInt($value));
 				return;
-
 			case ValueType::FLOAT:
 				$this->userConfig->setValueFloat($userId, $appId, $entry->getKey(), $this->convertToFloat($value));
 				return;
-
 			case ValueType::BOOL:
 				$this->userConfig->setValueBool($userId, $appId, $entry->getKey(), $this->convertToBool($value, $entry));
 				return;
-
 			case ValueType::ARRAY:
 				$this->userConfig->setValueArray($userId, $appId, $entry->getKey(), $this->convertToArray($value));
 				return;

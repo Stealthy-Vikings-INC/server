@@ -5,6 +5,7 @@
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OCA\Encryption\Crypto;
 
 use OC\Encryption\Exceptions\DecryptionFailedException;
@@ -342,9 +343,8 @@ class Crypt {
 	 * @param string $privateKey
 	 * @param string $password
 	 * @param string $uid for regular users, empty for system keys
-	 * @return false|string
 	 */
-	public function decryptPrivateKey($privateKey, $password = '', $uid = '') {
+	public function decryptPrivateKey($privateKey, $password = '', $uid = '') : string|false {
 		$header = $this->parseHeader($privateKey);
 
 		if (isset($header['cipher'])) {
@@ -470,7 +470,6 @@ class Crypt {
 		return hash_hmac('sha256', $data, $passPhrase);
 	}
 
-
 	/**
 	 * @param bool $hasSignature did the block contain a signature, in this case we use a different padding
 	 */
@@ -534,7 +533,6 @@ class Crypt {
 		return ($signaturePosition !== false);
 	}
 
-
 	/**
 	 * @throws DecryptionFailedException
 	 */
@@ -546,7 +544,7 @@ class Crypt {
 			$options,
 			$iv);
 
-		if ($plainContent) {
+		if ($plainContent !== false) {
 			return $plainContent;
 		} else {
 			throw new DecryptionFailedException('Encryption library: Decryption (symmetric) of content failed: ' . openssl_error_string());

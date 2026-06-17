@@ -10,6 +10,7 @@ namespace Test\Files\Cache;
 
 use OC\Files\Cache\Cache;
 use OC\Files\Cache\CacheEntry;
+use OC\Files\Cache\Wrapper\CacheJail;
 use OC\Files\Search\SearchComparison;
 use OC\Files\Search\SearchQuery;
 use OC\Files\Storage\Temporary;
@@ -24,6 +25,7 @@ use OCP\IUserManager;
 use OCP\Server;
 
 class LongId extends Temporary {
+	#[\Override]
 	public function getId(): string {
 		return 'long:' . str_repeat('foo', 50) . parent::getId();
 	}
@@ -32,10 +34,10 @@ class LongId extends Temporary {
 /**
  * Class CacheTest
  *
- * @group DB
  *
  * @package Test\Files\Cache
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class CacheTest extends \Test\TestCase {
 	/**
 	 * @var Temporary $storage ;
@@ -55,6 +57,7 @@ class CacheTest extends \Test\TestCase {
 	 */
 	protected $cache2;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -66,6 +69,7 @@ class CacheTest extends \Test\TestCase {
 		$this->cache2->insert('', ['size' => 0, 'mtime' => 0, 'mimetype' => ICacheEntry::DIRECTORY_MIMETYPE]);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		if ($this->cache) {
 			$this->cache->clear();
@@ -491,7 +495,6 @@ class CacheTest extends \Test\TestCase {
 
 		$this->cache->move($sourceFolder, $targetFolder);
 
-
 		$this->assertFalse($this->cache->inCache($sourceFolder));
 		$this->assertTrue($this->cache2->inCache($sourceFolder));
 		$this->assertTrue($this->cache->inCache($targetFolder));
@@ -511,7 +514,6 @@ class CacheTest extends \Test\TestCase {
 		$this->cache2->put('folder', $folderData);
 		$this->cache2->put('folder/sub', $data);
 
-
 		$this->cache->moveFromCache($this->cache2, 'folder', 'targetfolder');
 
 		$this->assertFalse($this->cache2->inCache('folder'));
@@ -519,6 +521,24 @@ class CacheTest extends \Test\TestCase {
 
 		$this->assertTrue($this->cache->inCache('targetfolder'));
 		$this->assertTrue($this->cache->inCache('targetfolder/sub'));
+	}
+
+	public function testMoveFromCacheJail(): void {
+		$data = ['size' => 100, 'mtime' => 50, 'mimetype' => 'foo/bar'];
+		$folderData = ['size' => 100, 'mtime' => 50, 'mimetype' => ICacheEntry::DIRECTORY_MIMETYPE];
+
+		$this->cache2->put('folder', $folderData);
+		$this->cache2->put('folder/sub', $data);
+
+		$jail = new CacheJail($this->cache2, 'folder');
+
+		$this->cache->moveFromCache($jail, 'sub', 'targetsub');
+
+		$this->assertTrue($this->cache2->inCache('folder'));
+		$this->assertFalse($this->cache2->inCache('folder/sub'));
+
+		$this->assertTrue($this->cache->inCache('targetsub'));
+		$this->assertEquals($this->cache->getId(''), $this->cache->get('targetsub')->getParentId());
 	}
 
 	public function testGetIncomplete(): void {
@@ -779,26 +799,31 @@ class CacheTest extends \Test\TestCase {
 		$entries = $this->cache->getFolderContents('');
 		$this->assertCount(4, $entries);
 
-		$this->assertEquals('foo1', $entries[0]->getName());
-		$this->assertEquals('foo2', $entries[1]->getName());
-		$this->assertEquals('foo3', $entries[2]->getName());
-		$this->assertEquals('foo4', $entries[3]->getName());
+		$entriesByName = [];
+		foreach ($entries as $entry) {
+			$entriesByName[$entry->getName()] = $entry;
+		}
 
-		$this->assertEquals(20, $entries[0]->getCreationTime());
-		$this->assertEquals(0, $entries[0]->getUploadTime());
-		$this->assertEquals(null, $entries[0]->getMetadataEtag());
+		$this->assertArrayHasKey('foo1', $entriesByName);
+		$this->assertArrayHasKey('foo2', $entriesByName);
+		$this->assertArrayHasKey('foo3', $entriesByName);
+		$this->assertArrayHasKey('foo4', $entriesByName);
 
-		$this->assertEquals(0, $entries[1]->getCreationTime());
-		$this->assertEquals(30, $entries[1]->getUploadTime());
-		$this->assertEquals(null, $entries[1]->getMetadataEtag());
+		$this->assertEquals(20, $entriesByName['foo1']->getCreationTime());
+		$this->assertEquals(0, $entriesByName['foo1']->getUploadTime());
+		$this->assertEquals(null, $entriesByName['foo1']->getMetadataEtag());
 
-		$this->assertEquals(0, $entries[2]->getCreationTime());
-		$this->assertEquals(0, $entries[2]->getUploadTime());
-		$this->assertEquals('foo', $entries[2]->getMetadataEtag());
+		$this->assertEquals(0, $entriesByName['foo2']->getCreationTime());
+		$this->assertEquals(30, $entriesByName['foo2']->getUploadTime());
+		$this->assertEquals(null, $entriesByName['foo2']->getMetadataEtag());
 
-		$this->assertEquals(0, $entries[3]->getCreationTime());
-		$this->assertEquals(0, $entries[3]->getUploadTime());
-		$this->assertEquals(null, $entries[3]->getMetadataEtag());
+		$this->assertEquals(0, $entriesByName['foo3']->getCreationTime());
+		$this->assertEquals(0, $entriesByName['foo3']->getUploadTime());
+		$this->assertEquals('foo', $entriesByName['foo3']->getMetadataEtag());
+
+		$this->assertEquals(0, $entriesByName['foo4']->getCreationTime());
+		$this->assertEquals(0, $entriesByName['foo4']->getUploadTime());
+		$this->assertEquals(null, $entriesByName['foo4']->getMetadataEtag());
 
 		$this->cache->update($id1, ['upload_time' => 25]);
 
@@ -814,6 +839,7 @@ class CacheTest extends \Test\TestCase {
 		$entries = $this->cache->getFolderContents('sub');
 		$this->assertCount(1, $entries);
 
+		$this->assertEquals('foo1', $entries[0]->getName());
 		$this->assertEquals(20, $entries[0]->getCreationTime());
 		$this->assertEquals(25, $entries[0]->getUploadTime());
 		$this->assertEquals(null, $entries[0]->getMetadataEtag());

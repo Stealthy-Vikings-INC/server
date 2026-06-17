@@ -12,7 +12,6 @@ OC.L10N.register(
     "Confirm permanent deletion" : "Confirmer la suppression définitive",
     "Are you sure you want to permanently delete all files and folders in the trash? This cannot be undone." : "Êtes-vous sûr de vouloir supprimer définitivement tous les fichiers et dossiers dans la corbeille ? Cette action est irréversible.",
     "Cancel" : "Annuler",
-    "Deletion cancelled" : "Suppression annulée",
     "Original location" : "Emplacement original",
     "Deleted by" : "Supprimé par",
     "Deleted" : "Supprimé",

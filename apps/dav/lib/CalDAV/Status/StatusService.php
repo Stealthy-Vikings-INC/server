@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2023 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\DAV\CalDAV\Status;
 
 use DateTimeImmutable;
@@ -141,7 +142,7 @@ class StatusService {
 			$this->logger->debug("Found $count applicable event(s), changing user status", ['user' => $userId]);
 			$this->userStatusService->setUserStatus(
 				$userId,
-				IUserStatus::AWAY,
+				IUserStatus::BUSY,
 				IUserStatus::MESSAGE_CALENDAR_BUSY,
 				true
 			);

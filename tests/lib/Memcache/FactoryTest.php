@@ -12,12 +12,14 @@ use OC\Memcache\Factory;
 use OC\Memcache\NullCache;
 use OCP\HintException;
 use OCP\Profiler\IProfiler;
+use OCP\ServerVersion;
 use Psr\Log\LoggerInterface;
 
 class Test_Factory_Available_Cache1 extends NullCache {
 	public function __construct($prefix = '') {
 	}
 
+	#[\Override]
 	public static function isAvailable(): bool {
 		return true;
 	}
@@ -27,6 +29,7 @@ class Test_Factory_Available_Cache2 extends NullCache {
 	public function __construct($prefix = '') {
 	}
 
+	#[\Override]
 	public static function isAvailable(): bool {
 		return true;
 	}
@@ -36,6 +39,7 @@ class Test_Factory_Unavailable_Cache1 extends NullCache {
 	public function __construct($prefix = '') {
 	}
 
+	#[\Override]
 	public static function isAvailable(): bool {
 		return false;
 	}
@@ -45,14 +49,13 @@ class Test_Factory_Unavailable_Cache2 extends NullCache {
 	public function __construct($prefix = '') {
 	}
 
+	#[\Override]
 	public static function isAvailable(): bool {
 		return false;
 	}
 }
 
-/**
- * @group Memcache
- */
+#[\PHPUnit\Framework\Attributes\Group('Memcache')]
 class FactoryTest extends \Test\TestCase {
 	public const AVAILABLE1 = '\\Test\\Memcache\\Test_Factory_Available_Cache1';
 	public const AVAILABLE2 = '\\Test\\Memcache\\Test_Factory_Available_Cache2';
@@ -111,7 +114,8 @@ class FactoryTest extends \Test\TestCase {
 		$expectedLocalCache, $expectedDistributedCache, $expectedLockingCache): void {
 		$logger = $this->getMockBuilder(LoggerInterface::class)->getMock();
 		$profiler = $this->getMockBuilder(IProfiler::class)->getMock();
-		$factory = new Factory(fn () => 'abc', $logger, $profiler, $localCache, $distributedCache, $lockingCache);
+		$serverVersion = $this->createMock(ServerVersion::class);
+		$factory = new Factory($logger, $profiler, $serverVersion, $localCache, $distributedCache, $lockingCache);
 		$this->assertTrue(is_a($factory->createLocal(), $expectedLocalCache));
 		$this->assertTrue(is_a($factory->createDistributed(), $expectedDistributedCache));
 		$this->assertTrue(is_a($factory->createLocking(), $expectedLockingCache));
@@ -123,13 +127,15 @@ class FactoryTest extends \Test\TestCase {
 
 		$logger = $this->getMockBuilder(LoggerInterface::class)->getMock();
 		$profiler = $this->getMockBuilder(IProfiler::class)->getMock();
-		new Factory(fn () => 'abc', $logger, $profiler, $localCache, $distributedCache);
+		$serverVersion = $this->createMock(ServerVersion::class);
+		new Factory($logger, $profiler, $serverVersion, $localCache, $distributedCache);
 	}
 
 	public function testCreateInMemory(): void {
 		$logger = $this->getMockBuilder(LoggerInterface::class)->getMock();
 		$profiler = $this->getMockBuilder(IProfiler::class)->getMock();
-		$factory = new Factory(fn () => 'abc', $logger, $profiler, null, null, null);
+		$serverVersion = $this->createMock(ServerVersion::class);
+		$factory = new Factory($logger, $profiler, $serverVersion, null, null, null);
 
 		$cache = $factory->createInMemory();
 		$cache->set('test', 48);

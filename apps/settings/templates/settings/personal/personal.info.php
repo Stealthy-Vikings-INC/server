@@ -8,14 +8,7 @@
 /** @var \OCP\IL10N $l */
 /** @var array $_ */
 
-script('settings', [
-	'usersettings',
-	'templates',
-	'federationsettingsview',
-	'federationscopemenu',
-	'settings/personalInfo',
-	'vue-settings-personal-info',
-]);
+\OCP\Util::addScript('settings', 'vue-settings-personal-info');
 ?>
 <?php if (!$_['isFairUseOfFreePushService']) : ?>
 	<div class="section">
@@ -68,10 +61,16 @@ script('settings', [
 		<div id="vue-fdow-section"></div>
 	</div>
 	<div class="personal-settings-setting-box">
+		<div id="vue-timezone-section"></div>
+	</div>
+	<div class="personal-settings-setting-box">
 		<div id="vue-website-section"></div>
 	</div>
 	<div class="personal-settings-setting-box">
 		<div id="vue-twitter-section"></div>
+	</div>
+	<div class="personal-settings-setting-box">
+		<div id="vue-bluesky-section"></div>
 	</div>
 	<div class="personal-settings-setting-box">
 		<div id="vue-fediverse-section"></div>

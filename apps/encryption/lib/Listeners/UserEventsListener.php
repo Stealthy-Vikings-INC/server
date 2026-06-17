@@ -10,7 +10,6 @@ namespace OCA\Encryption\Listeners;
 
 use OC\Core\Events\BeforePasswordResetEvent;
 use OC\Core\Events\PasswordResetEvent;
-use OC\Files\SetupManager;
 use OCA\Encryption\KeyManager;
 use OCA\Encryption\Services\PassphraseService;
 use OCA\Encryption\Session;
@@ -18,9 +17,9 @@ use OCA\Encryption\Users\Setup;
 use OCA\Encryption\Util;
 use OCP\EventDispatcher\Event;
 use OCP\EventDispatcher\IEventListener;
+use OCP\Files\ISetupManager;
 use OCP\IUser;
-use OCP\IUserManager;
-use OCP\IUserSession;
+use OCP\Lockdown\ILockdownManager;
 use OCP\User\Events\BeforePasswordUpdatedEvent;
 use OCP\User\Events\PasswordUpdatedEvent;
 use OCP\User\Events\UserCreatedEvent;
@@ -39,13 +38,13 @@ class UserEventsListener implements IEventListener {
 		private Setup $userSetup,
 		private Session $session,
 		private KeyManager $keyManager,
-		private IUserManager $userManager,
-		private IUserSession $userSession,
-		private SetupManager $setupManager,
+		private ISetupManager $setupManager,
 		private PassphraseService $passphraseService,
+		private ILockdownManager $lockdownManager,
 	) {
 	}
 
+	#[\Override]
 	public function handle(Event $event): void {
 		if ($event instanceof UserCreatedEvent) {
 			$this->onUserCreated($event->getUid(), $event->getPassword());
@@ -70,6 +69,11 @@ class UserEventsListener implements IEventListener {
 	 * Startup encryption backend upon user login
 	 */
 	private function onUserLogin(IUser $user, ?string $password): void {
+		// Do not try to setup filesystem if the current request does not have permissions to access it
+		if (!$this->lockdownManager->canAccessFilesystem()) {
+			return;
+		}
+
 		// ensure filesystem is loaded
 		$this->setupManager->setupForUser($user);
 		if ($this->util->isMasterKeyEnabled() === false) {

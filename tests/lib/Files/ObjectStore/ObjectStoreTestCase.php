@@ -25,12 +25,14 @@ abstract class ObjectStoreTestCase extends TestCase {
 		$this->cleanup[] = $urn;
 	}
 
+	#[\Override]
 	public function setUp(): void {
 		parent::setUp();
 
 		$this->instance = $this->getInstance();
 	}
 
+	#[\Override]
 	public function tearDown(): void {
 		if ($this->instance) {
 			foreach ($this->cleanup as $urn) {
@@ -61,6 +63,15 @@ abstract class ObjectStoreTestCase extends TestCase {
 		$this->assertEquals('foobar', stream_get_contents($result));
 	}
 
+	protected function assertOnlyExpectedWarnings(array $warnings): void {
+		$onlyFopenWarnings = array_reduce(
+			$warnings,
+			fn (bool $ok, string $warning) => $ok && str_starts_with($warning, 'fopen('),
+			true,
+		);
+		$this->assertTrue($onlyFopenWarnings);
+	}
+
 	public function testDelete(): void {
 		$stream = $this->stringToStream('foobar');
 
@@ -70,25 +81,39 @@ abstract class ObjectStoreTestCase extends TestCase {
 
 		$instance->deleteObject('2');
 
+		$warnings = [];
 		try {
+			set_error_handler(
+				function (int $errno, string $errstr) use (&$warnings): void {
+					$warnings[] = $errstr;
+				},
+			);
 			// to to read to verify that the object no longer exists
 			$instance->readObject('2');
 			$this->fail();
 		} catch (\Exception $e) {
-			// dummy assert to keep phpunit happy
-			$this->assertEquals(1, 1);
+			$this->assertOnlyExpectedWarnings($warnings);
+		} finally {
+			restore_error_handler();
 		}
 	}
 
 	public function testReadNonExisting(): void {
 		$instance = $this->getInstance();
 
+		$warnings = [];
 		try {
+			set_error_handler(
+				function (int $errno, string $errstr) use (&$warnings): void {
+					$warnings[] = $errstr;
+				},
+			);
 			$instance->readObject('non-existing');
 			$this->fail();
 		} catch (\Exception $e) {
-			// dummy assert to keep phpunit happy
-			$this->assertEquals(1, 1);
+			$this->assertOnlyExpectedWarnings($warnings);
+		} finally {
+			restore_error_handler();
 		}
 	}
 

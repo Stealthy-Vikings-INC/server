@@ -7,23 +7,31 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OC;
 
 use bantu\IniGetWrapper\IniGetWrapper;
 use OC\AppFramework\Http\Request;
 use OC\Authentication\Token\IProvider;
+use OC\Core\AppInfo\Application;
+use OC\Core\AppInfo\ConfigLexicon;
 use OC\Files\FilenameValidator;
 use OC\Search\SearchQuery;
+use OC\Security\CSP\ContentSecurityPolicyNonceManager;
 use OC\Template\CSSResourceLocator;
 use OC\Template\JSConfigHelper;
 use OC\Template\JSResourceLocator;
+use OCA\Theming\Service\ThemesService;
 use OCP\App\IAppManager;
 use OCP\AppFramework\Http\TemplateResponse;
 use OCP\Defaults;
+use OCP\IAppConfig;
 use OCP\IConfig;
+use OCP\IGroupManager;
 use OCP\IInitialStateService;
 use OCP\INavigationManager;
 use OCP\IRequest;
+use OCP\ISession;
 use OCP\IURLGenerator;
 use OCP\IUserSession;
 use OCP\L10N\IFactory;
@@ -35,20 +43,22 @@ use OCP\Template\ITemplateManager;
 use OCP\Util;
 
 class TemplateLayout {
-	private static string $versionHash = '';
+	private string $versionHash = '';
 	/** @var string[] */
-	private static array $cacheBusterCache = [];
+	private array $cacheBusterCache = [];
 
-	public static ?CSSResourceLocator $cssLocator = null;
-	public static ?JSResourceLocator $jsLocator = null;
+	public ?CSSResourceLocator $cssLocator = null;
+	public ?JSResourceLocator $jsLocator = null;
 
 	public function __construct(
 		private IConfig $config,
+		private readonly IAppConfig $appConfig,
 		private IAppManager $appManager,
 		private InitialStateService $initialState,
 		private INavigationManager $navigationManager,
 		private ITemplateManager $templateManager,
 		private ServerVersion $serverVersion,
+		private IRequest $request,
 	) {
 	}
 
@@ -63,7 +73,8 @@ class TemplateLayout {
 		switch ($renderAs) {
 			case TemplateResponse::RENDER_AS_USER:
 				$page = $this->templateManager->getTemplate('core', 'layout.user');
-				if (in_array(\OC_App::getCurrentApp(), ['settings','admin', 'help']) !== false) {
+				$pathInfo = $this->request->getPathInfo();
+				if ($pathInfo !== false && str_starts_with($pathInfo, '/settings/')) {
 					$page->assign('bodyid', 'body-settings');
 				} else {
 					$page->assign('bodyid', 'body-user');
@@ -72,9 +83,9 @@ class TemplateLayout {
 				$this->initialState->provideInitialState('core', 'active-app', $this->navigationManager->getActiveEntry());
 				$this->initialState->provideInitialState('core', 'apps', array_values($this->navigationManager->getAll()));
 
+				$this->initialState->provideInitialState('unified-search', 'min-search-length', $this->appConfig->getValueInt(Application::APP_ID, ConfigLexicon::UNIFIED_SEARCH_MIN_SEARCH_LENGTH));
 				if ($this->config->getSystemValueBool('unified_search.enabled', false) || !$this->config->getSystemValueBool('enable_non-accessible_features', true)) {
 					$this->initialState->provideInitialState('unified-search', 'limit-default', (int)$this->config->getAppValue('core', 'unified-search.limit-default', (string)SearchQuery::LIMIT_DEFAULT));
-					$this->initialState->provideInitialState('unified-search', 'min-search-length', (int)$this->config->getAppValue('core', 'unified-search.min-search-length', (string)1));
 					$this->initialState->provideInitialState('unified-search', 'live-search', $this->config->getAppValue('core', 'unified-search.live-search', 'yes') === 'yes');
 					Util::addScript('core', 'legacy-unified-search', 'core');
 				} else {
@@ -152,6 +163,9 @@ class TemplateLayout {
 				$page->assign('appid', $appId);
 				$page->assign('bodyid', 'body-public');
 
+				$currentAppData = $this->navigationManager->get($appId);
+				$this->initialState->provideInitialState('core', 'apps', $currentAppData === null ? [] : [$currentAppData]);
+
 				// Set logo link target
 				$logoUrl = $this->config->getSystemValueString('logo_url', '');
 				$page->assign('logoUrl', $logoUrl);
@@ -193,49 +207,50 @@ class TemplateLayout {
 
 		// Set body data-theme
 		try {
-			$themesService = Server::get(\OCA\Theming\Service\ThemesService::class);
+			$themesService = Server::get(ThemesService::class);
 		} catch (\Exception) {
 			$themesService = null;
 		}
 		$page->assign('enabledThemes', $themesService?->getEnabledThemes() ?? []);
 
 		if ($this->config->getSystemValueBool('installed', false)) {
-			if (empty(self::$versionHash)) {
+			if (empty($this->versionHash)) {
 				$v = $this->appManager->getAppInstalledVersions(true);
 				$v['core'] = implode('.', $this->serverVersion->getVersion());
-				self::$versionHash = substr(md5(implode(',', $v)), 0, 8);
+				$this->versionHash = substr(md5(implode(',', $v)), 0, 8);
 			}
 		} else {
-			self::$versionHash = md5('not installed');
+			$this->versionHash = md5('not installed');
 		}
 
 		// Add the js files
-		$jsFiles = self::findJavascriptFiles(Util::getScripts());
+		$jsFiles = $this->findJavascriptFiles(Util::getScripts());
 		$page->assign('jsfiles', []);
-		if ($this->config->getSystemValueBool('installed', false) && $renderAs != TemplateResponse::RENDER_AS_ERROR) {
+		if ($this->config->getSystemValueBool('installed', false) && $renderAs !== TemplateResponse::RENDER_AS_ERROR) {
 			// this is on purpose outside of the if statement below so that the initial state is prefilled (done in the getConfig() call)
 			// see https://github.com/nextcloud/server/pull/22636 for details
 			$jsConfigHelper = new JSConfigHelper(
 				$this->serverVersion,
-				\OCP\Util::getL10N('lib'),
-				\OCP\Server::get(Defaults::class),
+				Util::getL10N('lib'),
+				Server::get(Defaults::class),
 				$this->appManager,
-				\OC::$server->getSession(),
-				\OC::$server->getUserSession()->getUser(),
+				Server::get(ISession::class),
+				Server::get(IUserSession::class)->getUser(),
 				$this->config,
-				\OC::$server->getGroupManager(),
-				\OC::$server->get(IniGetWrapper::class),
-				\OC::$server->getURLGenerator(),
-				\OC::$server->get(CapabilitiesManager::class),
-				\OCP\Server::get(IInitialStateService::class),
-				\OCP\Server::get(IProvider::class),
-				\OCP\Server::get(FilenameValidator::class),
+				$this->appConfig,
+				Server::get(IGroupManager::class),
+				Server::get(IniGetWrapper::class),
+				Server::get(IURLGenerator::class),
+				Server::get(CapabilitiesManager::class),
+				Server::get(IInitialStateService::class),
+				Server::get(IProvider::class),
+				Server::get(FilenameValidator::class),
 			);
 			$config = $jsConfigHelper->getConfig();
-			if (\OC::$server->getContentSecurityPolicyNonceManager()->browserSupportsCspV3()) {
+			if (Server::get(ContentSecurityPolicyNonceManager::class)->browserSupportsCspV3()) {
 				$page->assign('inline_ocjs', $config);
 			} else {
-				$page->append('jsfiles', \OC::$server->getURLGenerator()->linkToRoute('core.OCJS.getConfig', ['v' => self::$versionHash]));
+				$page->append('jsfiles', Server::get(IURLGenerator::class)->linkToRoute('core.OCJS.getConfig', ['v' => $this->versionHash]));
 			}
 		}
 		foreach ($jsFiles as $info) {
@@ -244,10 +259,8 @@ class TemplateLayout {
 			$page->append('jsfiles', $web . '/' . $file . $this->getVersionHashSuffix());
 		}
 
-		$request = \OCP\Server::get(IRequest::class);
-
 		try {
-			$pathInfo = $request->getPathInfo();
+			$pathInfo = $this->request->getPathInfo();
 		} catch (\Exception $e) {
 			$pathInfo = '';
 		}
@@ -255,22 +268,22 @@ class TemplateLayout {
 		// Do not initialise scss appdata until we have a fully installed instance
 		// Do not load scss for update, errors, installation or login page
 		if ($this->config->getSystemValueBool('installed', false)
-			&& !\OCP\Util::needUpgrade()
+			&& !Util::needUpgrade()
 			&& $pathInfo !== ''
 			&& !preg_match('/^\/login/', $pathInfo)
 			&& $renderAs !== TemplateResponse::RENDER_AS_ERROR
 		) {
-			$cssFiles = self::findStylesheetFiles(\OC_Util::$styles);
+			$cssFiles = $this->findStylesheetFiles(\OC_Util::$styles);
 		} else {
 			// If we ignore the scss compiler,
 			// we need to load the guest css fallback
 			Util::addStyle('guest');
-			$cssFiles = self::findStylesheetFiles(\OC_Util::$styles);
+			$cssFiles = $this->findStylesheetFiles(\OC_Util::$styles);
 		}
 
 		$page->assign('cssfiles', []);
 		$page->assign('printcssfiles', []);
-		$this->initialState->provideInitialState('core', 'versionHash', self::$versionHash);
+		$this->initialState->provideInitialState('core', 'versionHash', $this->versionHash);
 		foreach ($cssFiles as $info) {
 			$web = $info[1];
 			$file = $info[2];
@@ -288,7 +301,7 @@ class TemplateLayout {
 			}
 		}
 
-		if ($request->isUserAgent([Request::USER_AGENT_CLIENT_IOS, Request::USER_AGENT_SAFARI, Request::USER_AGENT_SAFARI_MOBILE])) {
+		if ($this->request->isUserAgent([Request::USER_AGENT_CLIENT_IOS, Request::USER_AGENT_SAFARI, Request::USER_AGENT_SAFARI_MOBILE])) {
 			// Prevent auto zoom with iOS but still allow user zoom
 			// On chrome (and others) this does not work (will also disable user zoom)
 			$page->assign('viewport_maximum_scale', '1.0');
@@ -310,7 +323,7 @@ class TemplateLayout {
 
 		if ($this->config->getSystemValueBool('installed', false) === false) {
 			// if not installed just return the version hash
-			return '?v=' . self::$versionHash;
+			return '?v=' . $this->versionHash;
 		}
 
 		$hash = false;
@@ -324,7 +337,7 @@ class TemplateLayout {
 		}
 		// As a last resort we use the server version hash
 		if ($hash === false) {
-			$hash = self::$versionHash;
+			$hash = $this->versionHash;
 		}
 
 		// The theming app is force-enabled thus the cache buster is always available
@@ -334,7 +347,7 @@ class TemplateLayout {
 	}
 
 	private function getVersionHashByPath(string $path): string|false {
-		if (array_key_exists($path, self::$cacheBusterCache) === false) {
+		if (array_key_exists($path, $this->cacheBusterCache) === false) {
 			// Not yet cached, so lets find the cache buster string
 			$appId = $this->getAppNamefromPath($path);
 			if ($appId === false) {
@@ -344,34 +357,37 @@ class TemplateLayout {
 
 			if ($appId === 'core') {
 				// core is not a real app but the server itself
-				$hash = self::$versionHash;
+				$hash = $this->versionHash;
 			} else {
 				$appVersion = $this->appManager->getAppVersion($appId);
 				// For shipped apps the app version is not a single source of truth, we rather also need to consider the Nextcloud version
 				if ($this->appManager->isShipped($appId)) {
-					$appVersion .= '-' . self::$versionHash;
+					$appVersion .= '-' . $this->versionHash;
 				}
 
 				$hash = substr(md5($appVersion), 0, 8);
 			}
-			self::$cacheBusterCache[$path] = $hash;
+			$this->cacheBusterCache[$path] = $hash;
 		}
 
-		return self::$cacheBusterCache[$path];
+		return $this->cacheBusterCache[$path];
 	}
 
-	public static function findStylesheetFiles(array $styles): array {
-		if (!self::$cssLocator) {
-			self::$cssLocator = \OCP\Server::get(CSSResourceLocator::class);
+	private function findStylesheetFiles(array $styles): array {
+		if ($this->cssLocator === null) {
+			$this->cssLocator = Server::get(CSSResourceLocator::class);
 		}
-		self::$cssLocator->find($styles);
-		return self::$cssLocator->getResources();
+		$this->cssLocator->find($styles);
+		return $this->cssLocator->getResources();
 	}
 
 	public function getAppNamefromPath(string $path): string|false {
 		if ($path !== '') {
 			$pathParts = explode('/', $path);
-			if ($pathParts[0] === 'css') {
+			if ($pathParts[0] === 'dist') {
+				// Return the part before the dash in the file name
+				return explode('-', \end($pathParts), 2)[0];
+			} elseif ($pathParts[0] === 'css') {
 				// This is a scss request
 				return $pathParts[1];
 			} elseif ($pathParts[0] === 'core') {
@@ -382,12 +398,12 @@ class TemplateLayout {
 		return false;
 	}
 
-	public static function findJavascriptFiles(array $scripts): array {
-		if (!self::$jsLocator) {
-			self::$jsLocator = \OCP\Server::get(JSResourceLocator::class);
+	private function findJavascriptFiles(array $scripts): array {
+		if ($this->jsLocator === null) {
+			$this->jsLocator = Server::get(JSResourceLocator::class);
 		}
-		self::$jsLocator->find($scripts);
-		return self::$jsLocator->getResources();
+		$this->jsLocator->find($scripts);
+		return $this->jsLocator->getResources();
 	}
 
 	/**

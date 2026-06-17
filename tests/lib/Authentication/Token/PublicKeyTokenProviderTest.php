@@ -18,6 +18,7 @@ use OC\Authentication\Token\PublicKeyTokenProvider;
 use OCP\AppFramework\Db\DoesNotExistException;
 use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\Authentication\Token\IToken;
+use OCP\EventDispatcher\IEventDispatcher;
 use OCP\ICacheFactory;
 use OCP\IConfig;
 use OCP\IDBConnection;
@@ -29,33 +30,25 @@ use Psr\Log\LoggerInterface;
 use Test\TestCase;
 
 class PublicKeyTokenProviderTest extends TestCase {
-	/** @var PublicKeyTokenProvider|\PHPUnit\Framework\MockObject\MockObject */
-	private $tokenProvider;
-	/** @var PublicKeyTokenMapper|\PHPUnit\Framework\MockObject\MockObject */
-	private $mapper;
-	/** @var IHasher|\PHPUnit\Framework\MockObject\MockObject */
-	private $hasher;
-	/** @var ICrypto */
-	private $crypto;
-	/** @var IConfig|\PHPUnit\Framework\MockObject\MockObject */
-	private $config;
-	/** @var IDBConnection|MockObject */
-	private IDBConnection $db;
-	/** @var LoggerInterface|\PHPUnit\Framework\MockObject\MockObject */
-	private $logger;
-	/** @var ITimeFactory|\PHPUnit\Framework\MockObject\MockObject */
-	private $timeFactory;
-	/** @var ICacheFactory|\PHPUnit\Framework\MockObject\MockObject */
-	private $cacheFactory;
-	/** @var int */
-	private $time;
+	private PublicKeyTokenProvider $tokenProvider;
 
+	private PublicKeyTokenMapper&MockObject $mapper;
+	private IConfig&MockObject $config;
+	private IDBConnection&MockObject $db;
+	private LoggerInterface&MockObject $logger;
+	private ITimeFactory&MockObject $timeFactory;
+	private ICacheFactory&MockObject $cacheFactory;
+
+	private int $time;
+	private IHasher $hasher;
+	private ICrypto $crypto;
+	private IEventDispatcher $eventDispatcher;
+
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
 		$this->mapper = $this->createMock(PublicKeyTokenMapper::class);
-		$this->hasher = Server::get(IHasher::class);
-		$this->crypto = Server::get(ICrypto::class);
 		$this->config = $this->createMock(IConfig::class);
 		$this->config->method('getSystemValue')
 			->willReturnMap([
@@ -73,6 +66,10 @@ class PublicKeyTokenProviderTest extends TestCase {
 			->willReturn($this->time);
 		$this->cacheFactory = $this->createMock(ICacheFactory::class);
 
+		$this->hasher = Server::get(IHasher::class);
+		$this->crypto = Server::get(ICrypto::class);
+		$this->eventDispatcher = Server::get(IEventDispatcher::class);
+
 		$this->tokenProvider = new PublicKeyTokenProvider(
 			$this->mapper,
 			$this->crypto,
@@ -82,6 +79,7 @@ class PublicKeyTokenProviderTest extends TestCase {
 			$this->timeFactory,
 			$this->hasher,
 			$this->cacheFactory,
+			$this->eventDispatcher,
 		);
 	}
 
@@ -180,6 +178,7 @@ class PublicKeyTokenProviderTest extends TestCase {
 			->method('updateActivity')
 			->with($tk, $this->time);
 		$tk->setLastActivity($this->time - 200);
+		$tk->setToken('token');
 		$this->config->method('getSystemValueBool')
 			->willReturnMap([
 				['auth.storeCryptedPassword', true, true],
@@ -231,7 +230,6 @@ class PublicKeyTokenProviderTest extends TestCase {
 		$this->assertSame($password, $this->tokenProvider->getPassword($actual, $token));
 	}
 
-
 	public function testGetPasswordPasswordLessToken(): void {
 		$this->expectException(PasswordlessTokenException::class);
 
@@ -241,7 +239,6 @@ class PublicKeyTokenProviderTest extends TestCase {
 
 		$this->tokenProvider->getPassword($tk, $token);
 	}
-
 
 	public function testGetPasswordInvalidToken(): void {
 		$this->expectException(InvalidTokenException::class);
@@ -287,12 +284,10 @@ class PublicKeyTokenProviderTest extends TestCase {
 				return $newpass === $this->tokenProvider->getPassword($token, 'tokentokentokentokentoken');
 			}));
 
-
 		$this->tokenProvider->setPassword($actual, $token, $newpass);
 
 		$this->assertSame($newpass, $this->tokenProvider->getPassword($actual, 'tokentokentokentokentoken'));
 	}
-
 
 	public function testSetPasswordInvalidToken(): void {
 		$this->expectException(InvalidTokenException::class);
@@ -446,6 +441,7 @@ class PublicKeyTokenProviderTest extends TestCase {
 
 	public function testGetToken(): void {
 		$token = new PublicKeyToken();
+		$token->setToken('token');
 
 		$this->config->method('getSystemValue')
 			->with('secret')
@@ -593,6 +589,9 @@ class PublicKeyTokenProviderTest extends TestCase {
 
 	public function testMarkPasswordInvalid(): void {
 		$token = $this->createMock(PublicKeyToken::class);
+		$token->expects($this->once())
+			->method('getToken')
+			->willReturn('token');
 
 		$token->expects($this->once())
 			->method('setPasswordInvalid')

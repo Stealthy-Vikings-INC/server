@@ -12,7 +12,6 @@ OC.L10N.register(
     "Confirm permanent deletion" : "Confirm permanent deletion",
     "Are you sure you want to permanently delete all files and folders in the trash? This cannot be undone." : "Are you sure you want to permanently delete all files and folders in the trash? This cannot be undone.",
     "Cancel" : "Cancel",
-    "Deletion cancelled" : "Deletion cancelled",
     "Original location" : "Original location",
     "Deleted by" : "Deleted by",
     "Deleted" : "Deleted",

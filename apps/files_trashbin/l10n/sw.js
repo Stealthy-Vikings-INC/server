@@ -12,7 +12,6 @@ OC.L10N.register(
     "Confirm permanent deletion" : "Thibitisha ufutaji wa kudumu",
     "Are you sure you want to permanently delete all files and folders in the trash? This cannot be undone." : "Je, una uhakika unataka kufuta kabisa faili na folda zote kwenye tupio? Hili haliwezi kutenduliwa.",
     "Cancel" : "Ghairi",
-    "Deletion cancelled" : "Ufutaji umesitishwa",
     "Original location" : "Mahali pa asili",
     "Deleted by" : "Imefutwa na",
     "Deleted" : "Vilivyofutwa",

@@ -3,6 +3,7 @@ OC.L10N.register(
     {
     "Channel updated" : "Kanal güncellendi",
     "Web updater is disabled" : "Güncelleyici kapalı",
+    "Configuration is read-only" : "Yapılandırma salt okunur",
     "App updated" : "Uygulama güncellendi",
     "See what's new" : "Yeniliklere bakın",
     "{app} updated to version {version}" : "{app}, {version} sürümüne güncellendi",
@@ -18,15 +19,17 @@ OC.L10N.register(
     "No changelog available" : "Kullanılabilecek bir değişiklik günlüğü yok",
     "What's new in {app} {version}" : "{app} {version} sürümündeki yenilikler",
     "A new version is available: <strong>{newVersionString}</strong>" : "Yeni bir sürüm yayınlanmış: <strong>{newVersionString}</strong>",
-    "Note that after a new release the update only shows up after the first minor release or later. We roll out new versions spread out over time and sometimes skip a version when issues are found. Learn more about updates and release channels at {link}" : "Yeni bir sürümden sonra güncellemenin yalnızca ilk yeni küçük sürüm ya da daha sonraki sürümler yayınlandığında görüntüleneceğini unutmayın. Yeni sürümleri zamanla dağıtıyoruz ve bazen sorunlarla karşılaştığımızda bir sürümü atlayabiliyoruz. Güncellemeler ve yayın kanalları hakkında ayrıntılı bilgi almak için {link} adresine bakabilirsiniz.",
+    "Note that after a new release the update only shows up after the first minor release or later. We roll out new versions spread out over time and sometimes skip a version when issues are found. Learn more about updates and release channels at {link}" : "Yeni bir sürümden sonra güncellemenin yalnızca ilk yeni küçük sürüm ya da daha sonraki sürümler yayınlandığında görüntüleneceğini unutmayın. Yeni sürümleri zamanla dağıtıyoruz ve bazen sorunlarla karşılaştığımızda bir sürümü atlayabiliyoruz. Güncellemeler ve yayın kanalları ile ilgili ayrıntılı bilgi almak için {link} adresine bakabilirsiniz.",
     "Checked on {lastCheckedDate} - Open changelog" : "Son denetim: {lastCheckedDate} - Değişiklik günlüğünü aç",
     "Checking apps for compatible versions" : "Uygulamalar uyumlu sürümler için denetleniyor",
     "Please make sure your config.php does not set <samp>appstoreenabled</samp> to false." : "Lütfen config.php dosyasındaki <samp>appstoreenabled</samp> seçeneğinin false olarak ayarlanmadığından emin olun.",
     "Could not connect to the App Store or no updates have been returned at all. Search manually for updates or make sure your server has access to the internet and can connect to the App Store." : "Uygulama mağazası ile bağlantı kurulamadı ya da uygulama mağazasında herhangi bir güncelleme yok. Güncellemeleri el ile arayın ya da sunucunuzun İnternet ve uygulama mağazası ile bağlantı kurabildiğinden emin olun.",
-    "<strong>All</strong> apps have a compatible version for this Nextcloud version available." : "<strong>Tüm</strong> uygulamaların bu Nextcloud sürümü ile uyumlu bir sürümü var.",
-    "_<strong>%n</strong> app has no compatible version for this Nextcloud version available._::_<strong>%n</strong> apps have no compatible version for this Nextcloud version available._" : ["<strong>%n</strong> uygulamanın bu Nextcloud sürümü ile uyumlu bir sürümü var.","<strong>%n</strong> uygulamanın bu Nextcloud sürümü ile uyumlu bir sürümü var."],
+    "<strong>All</strong> apps have a compatible version for this {productName} version available." : "<strong>Tüm</strong> uygulamaların bu {productName} sürümü ile uyumlu bir sürümü var.",
+    "_<strong>%n</strong> app has no compatible version for this {productName} version available._::_<strong>%n</strong> apps have no compatible version for this {productName} version available._" : ["<strong>%n</strong> uygulamanın bu {productName} sürümü ile uyumlu bir sürümü var.","<strong>%n</strong> uygulamanın bu {productName} sürümü ile uyumlu bir sürümü var."],
     "Enterprise" : "Kurumsal",
-    "For enterprise use. Provides always the latest patch level, but will not update to the next major release immediately. That update happens once Nextcloud GmbH has done additional hardening and testing for large-scale and mission-critical deployments. This channel is only available to customers and provides the Nextcloud Enterprise package." : "Kurumsal kullanım için her zaman en son yayınlanmış yama düzeyi sunulur ancak sonraki ana sürüme hemen geçilmez. Bu güncellemeye Nextcloud GmbH tarafından büyük ölçekli ve görev kritik dağıtımlar için ek düzenlemeler ve sınamalar yapıldıktan sonra geçilir. Bu kanalı yalnızca müşteriler kullanabilir ve Nextcloud Enterprise paketi sunulur.",
+    "For enterprise use. Provides always the latest patch level, but will not update to the next major release immediately." : "Kurumsal kullanım için. Her zaman en güncel yama desteğini sağlar. Ancak bir sonraki büyük sürüme hemen güncellenmez.",
+    "That update happens once {vendor} has done additional hardening and testing for large-scale and mission-critical deployments." : "Bu güncelleme, {vendor} tarafından büyük ölçekli ve kritik görev dağıtımları için ek güçlendirme ve denemelerin ardından yapılır.",
+    "This channel is only available to customers and provides the {enterprise} package." : "Bu kanal yalnızca müşterilere açıktır ve {enterprise} paketi sunar.",
     "Stable" : "Kararlı",
     "The most recent stable version. It is suited for regular use and will always update to the latest major version." : "Son kararlı sürüm. Normal kullanıma uygundur ve her zaman son büyük sürümü kullanır.",
     "Beta" : "Beta",
@@ -56,6 +59,6 @@ OC.L10N.register(
     "The selected update channel does not support updates of the server." : "Seçilmiş güncelleme kanalı sunucunun güncellemelerini desteklemiyor.",
     "Changelog for app {app}" : "{app} değişiklik günlüğü",
     "What's new in {app} version {version}" : "{app} {version} sürümündeki yenilikler",
-    "{version} is available. Get more information on how to update." : "{version} sürümü yayınlanmış. Güncelleme hakkında ayrıntılı bilgi alın."
+    "{version} is available. Get more information on how to update." : "{version} sürümü yayınlanmış. Güncelleme ile ilgili ayrıntılı bilgi alın."
 },
 "nplurals=2; plural=(n > 1);");

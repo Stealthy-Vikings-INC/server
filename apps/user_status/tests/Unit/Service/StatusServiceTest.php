@@ -6,10 +6,9 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2020 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\UserStatus\Tests\Service;
 
-use Doctrine\DBAL\Exception\UniqueConstraintViolationException;
-use OC\DB\Exceptions\DbalException;
 use OCA\UserStatus\Db\UserStatus;
 use OCA\UserStatus\Db\UserStatusMapper;
 use OCA\UserStatus\Exception\InvalidClearAtException;
@@ -221,7 +220,7 @@ class StatusServiceTest extends TestCase {
 		$this->assertNull($status->getMessageId());
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('setStatusDataProvider')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'setStatusDataProvider')]
 	public function testSetStatus(
 		string $userId,
 		string $status,
@@ -342,7 +341,7 @@ class StatusServiceTest extends TestCase {
 		];
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('setPredefinedMessageDataProvider')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'setPredefinedMessageDataProvider')]
 	public function testSetPredefinedMessage(
 		string $userId,
 		string $messageId,
@@ -429,7 +428,7 @@ class StatusServiceTest extends TestCase {
 		];
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('setCustomMessageDataProvider')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'setCustomMessageDataProvider')]
 	public function testSetCustomMessage(
 		string $userId,
 		?string $statusIcon,
@@ -671,8 +670,8 @@ class StatusServiceTest extends TestCase {
 	}
 
 	public function testBackupWorkingHasBackupAlready(): void {
-		$p = $this->createMock(UniqueConstraintViolationException::class);
-		$e = DbalException::wrap($p);
+		$e = $this->createMock(Exception::class);
+		$e->method('getReason')->willReturn(Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION);
 		$this->mapper->expects($this->once())
 			->method('createBackupStatus')
 			->with('john')
@@ -793,7 +792,7 @@ class StatusServiceTest extends TestCase {
 		];
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('dataSetUserStatus')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataSetUserStatus')]
 	public function testSetUserStatus(string $messageId, string $oldMessageId, bool $expectedUpdateShortcut): void {
 		$previous = new UserStatus();
 		$previous->setId(1);
@@ -809,10 +808,12 @@ class StatusServiceTest extends TestCase {
 			->with('john')
 			->willReturn($previous);
 
-		$e = DbalException::wrap($this->createMock(UniqueConstraintViolationException::class));
+		/** @var MockObject&Exception $exception */
+		$exception = $this->createMock(Exception::class);
+		$exception->method('getReason')->willReturn(Exception::REASON_UNIQUE_CONSTRAINT_VIOLATION);
 		$this->mapper->expects($expectedUpdateShortcut ? $this->never() : $this->once())
 			->method('createBackupStatus')
-			->willThrowException($e);
+			->willThrowException($exception);
 
 		$this->mapper->expects($this->any())
 			->method('update')

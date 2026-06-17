@@ -7,14 +7,14 @@ namespace Composer\Autoload;
 class ComposerStaticInitFiles
 {
     public static $prefixLengthsPsr4 = array (
-        'O' => 
+        'O' =>
         array (
             'OCA\\Files\\' => 10,
         ),
     );
 
     public static $prefixDirsPsr4 = array (
-        'OCA\\Files\\' => 
+        'OCA\\Files\\' =>
         array (
             0 => __DIR__ . '/..' . '/../lib',
         ),
@@ -38,6 +38,7 @@ class ComposerStaticInitFiles
         'OCA\\Files\\BackgroundJob\\CleanupFileLocks' => __DIR__ . '/..' . '/../lib/BackgroundJob/CleanupFileLocks.php',
         'OCA\\Files\\BackgroundJob\\DeleteExpiredOpenLocalEditor' => __DIR__ . '/..' . '/../lib/BackgroundJob/DeleteExpiredOpenLocalEditor.php',
         'OCA\\Files\\BackgroundJob\\DeleteOrphanedItems' => __DIR__ . '/..' . '/../lib/BackgroundJob/DeleteOrphanedItems.php',
+        'OCA\\Files\\BackgroundJob\\SanitizeFilenames' => __DIR__ . '/..' . '/../lib/BackgroundJob/SanitizeFilenames.php',
         'OCA\\Files\\BackgroundJob\\ScanFiles' => __DIR__ . '/..' . '/../lib/BackgroundJob/ScanFiles.php',
         'OCA\\Files\\BackgroundJob\\TransferOwnership' => __DIR__ . '/..' . '/../lib/BackgroundJob/TransferOwnership.php',
         'OCA\\Files\\Capabilities' => __DIR__ . '/..' . '/../lib/Capabilities.php',
@@ -47,11 +48,15 @@ class ComposerStaticInitFiles
         'OCA\\Files\\Command\\Delete' => __DIR__ . '/..' . '/../lib/Command/Delete.php',
         'OCA\\Files\\Command\\DeleteOrphanedFiles' => __DIR__ . '/..' . '/../lib/Command/DeleteOrphanedFiles.php',
         'OCA\\Files\\Command\\Get' => __DIR__ . '/..' . '/../lib/Command/Get.php',
+        'OCA\\Files\\Command\\Mount\\ListMounts' => __DIR__ . '/..' . '/../lib/Command/Mount/ListMounts.php',
+        'OCA\\Files\\Command\\Mount\\Refresh' => __DIR__ . '/..' . '/../lib/Command/Mount/Refresh.php',
         'OCA\\Files\\Command\\Move' => __DIR__ . '/..' . '/../lib/Command/Move.php',
         'OCA\\Files\\Command\\Object\\Delete' => __DIR__ . '/..' . '/../lib/Command/Object/Delete.php',
         'OCA\\Files\\Command\\Object\\Get' => __DIR__ . '/..' . '/../lib/Command/Object/Get.php',
         'OCA\\Files\\Command\\Object\\Info' => __DIR__ . '/..' . '/../lib/Command/Object/Info.php',
         'OCA\\Files\\Command\\Object\\ListObject' => __DIR__ . '/..' . '/../lib/Command/Object/ListObject.php',
+        'OCA\\Files\\Command\\Object\\Multi\\Rename' => __DIR__ . '/..' . '/../lib/Command/Object/Multi/Rename.php',
+        'OCA\\Files\\Command\\Object\\Multi\\Users' => __DIR__ . '/..' . '/../lib/Command/Object/Multi/Users.php',
         'OCA\\Files\\Command\\Object\\ObjectUtil' => __DIR__ . '/..' . '/../lib/Command/Object/ObjectUtil.php',
         'OCA\\Files\\Command\\Object\\Orphans' => __DIR__ . '/..' . '/../lib/Command/Object/Orphans.php',
         'OCA\\Files\\Command\\Object\\Put' => __DIR__ . '/..' . '/../lib/Command/Object/Put.php',
@@ -62,10 +67,12 @@ class ComposerStaticInitFiles
         'OCA\\Files\\Command\\ScanAppData' => __DIR__ . '/..' . '/../lib/Command/ScanAppData.php',
         'OCA\\Files\\Command\\TransferOwnership' => __DIR__ . '/..' . '/../lib/Command/TransferOwnership.php',
         'OCA\\Files\\Command\\WindowsCompatibleFilenames' => __DIR__ . '/..' . '/../lib/Command/WindowsCompatibleFilenames.php',
+        'OCA\\Files\\ConfigLexicon' => __DIR__ . '/..' . '/../lib/ConfigLexicon.php',
         'OCA\\Files\\Controller\\ApiController' => __DIR__ . '/..' . '/../lib/Controller/ApiController.php',
         'OCA\\Files\\Controller\\ConversionApiController' => __DIR__ . '/..' . '/../lib/Controller/ConversionApiController.php',
         'OCA\\Files\\Controller\\DirectEditingController' => __DIR__ . '/..' . '/../lib/Controller/DirectEditingController.php',
         'OCA\\Files\\Controller\\DirectEditingViewController' => __DIR__ . '/..' . '/../lib/Controller/DirectEditingViewController.php',
+        'OCA\\Files\\Controller\\FilenamesController' => __DIR__ . '/..' . '/../lib/Controller/FilenamesController.php',
         'OCA\\Files\\Controller\\OpenLocalEditorController' => __DIR__ . '/..' . '/../lib/Controller/OpenLocalEditorController.php',
         'OCA\\Files\\Controller\\TemplateController' => __DIR__ . '/..' . '/../lib/Controller/TemplateController.php',
         'OCA\\Files\\Controller\\TransferOwnershipController' => __DIR__ . '/..' . '/../lib/Controller/TransferOwnershipController.php',
@@ -87,6 +94,7 @@ class ComposerStaticInitFiles
         'OCA\\Files\\Listener\\NodeRemovedFromFavoriteListener' => __DIR__ . '/..' . '/../lib/Listener/NodeRemovedFromFavoriteListener.php',
         'OCA\\Files\\Listener\\RenderReferenceEventListener' => __DIR__ . '/..' . '/../lib/Listener/RenderReferenceEventListener.php',
         'OCA\\Files\\Listener\\SyncLivePhotosListener' => __DIR__ . '/..' . '/../lib/Listener/SyncLivePhotosListener.php',
+        'OCA\\Files\\Listener\\UserFirstTimeLoggedInListener' => __DIR__ . '/..' . '/../lib/Listener/UserFirstTimeLoggedInListener.php',
         'OCA\\Files\\Migration\\Version11301Date20191205150729' => __DIR__ . '/..' . '/../lib/Migration/Version11301Date20191205150729.php',
         'OCA\\Files\\Migration\\Version12101Date20221011153334' => __DIR__ . '/..' . '/../lib/Migration/Version12101Date20221011153334.php',
         'OCA\\Files\\Migration\\Version2003Date20241021095629' => __DIR__ . '/..' . '/../lib/Migration/Version2003Date20241021095629.php',
@@ -101,7 +109,7 @@ class ComposerStaticInitFiles
         'OCA\\Files\\Service\\TagService' => __DIR__ . '/..' . '/../lib/Service/TagService.php',
         'OCA\\Files\\Service\\UserConfig' => __DIR__ . '/..' . '/../lib/Service/UserConfig.php',
         'OCA\\Files\\Service\\ViewConfig' => __DIR__ . '/..' . '/../lib/Service/ViewConfig.php',
-        'OCA\\Files\\Settings\\DeclarativeAdminSettings' => __DIR__ . '/..' . '/../lib/Settings/DeclarativeAdminSettings.php',
+        'OCA\\Files\\Settings\\AdminSettings' => __DIR__ . '/..' . '/../lib/Settings/AdminSettings.php',
         'OCA\\Files\\Settings\\PersonalSettings' => __DIR__ . '/..' . '/../lib/Settings/PersonalSettings.php',
     );
 

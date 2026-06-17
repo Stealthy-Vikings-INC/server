@@ -28,6 +28,7 @@ class EnableTest extends TestCase {
 	/** @var \Symfony\Component\Console\Command\Command */
 	protected $command;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -45,12 +46,11 @@ class EnableTest extends TestCase {
 		$this->command = new Enable($config, $manager);
 	}
 
-
 	public static function dataEnable(): array {
 		return [
-			['no', null, [], true, 'Encryption enabled', 'No encryption module is loaded'],
-			['yes', null, [], false, 'Encryption is already enabled', 'No encryption module is loaded'],
-			['no', null, ['OC_TEST_MODULE' => []], true, 'Encryption enabled', 'No default module is set'],
+			['no', '', [], true, 'Encryption enabled', 'No encryption module is loaded'],
+			['yes', '', [], false, 'Encryption is already enabled', 'No encryption module is loaded'],
+			['no', '', ['OC_TEST_MODULE' => []], true, 'Encryption enabled', 'No default module is set'],
 			['no', 'OC_NO_MODULE', ['OC_TEST_MODULE' => []], true, 'Encryption enabled', 'The current default module does not exist: OC_NO_MODULE'],
 			['no', 'OC_TEST_MODULE', ['OC_TEST_MODULE' => []], true, 'Encryption enabled', 'Default module: OC_TEST_MODULE'],
 		];
@@ -79,7 +79,7 @@ class EnableTest extends TestCase {
 				->method('getAppValue')
 				->willReturnMap([
 					['core', 'encryption_enabled', 'no', $oldStatus],
-					['core', 'default_encryption_module', null, $defaultModule],
+					['core', 'default_encryption_module', '', $defaultModule],
 				]);
 		}
 

@@ -5,6 +5,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\DAV\Tests\unit\DAV\Migration;
 
 use OCA\DAV\BackgroundJob\RefreshWebcalJob;
@@ -54,12 +55,11 @@ class RefreshWebcalJobRegistrarTest extends TestCase {
 			->with('calendarsubscriptions')
 			->willReturn($queryBuilder);
 		$queryBuilder->expects($this->once())
-			->method('execute')
+			->method('executeQuery')
 			->willReturn($statement);
 
 		$statement->expects($this->exactly(4))
-			->method('fetch')
-			->with(\PDO::FETCH_ASSOC)
+			->method('fetchAssociative')
 			->willReturnOnConsecutiveCalls(
 				[
 					'principaluri' => 'foo1',
@@ -73,7 +73,7 @@ class RefreshWebcalJobRegistrarTest extends TestCase {
 					'principaluri' => 'foo3',
 					'uri' => 'bar3',
 				],
-				null
+				false,
 			);
 
 		$this->jobList->expects($this->exactly(3))

@@ -8,6 +8,7 @@
 
 namespace Test;
 
+use OC\App\AppManager;
 use OC\App\AppStore\Fetcher\AppFetcher;
 use OC\Archive\ZIP;
 use OC\Installer;
@@ -16,29 +17,29 @@ use OCP\Http\Client\IClient;
 use OCP\Http\Client\IClientService;
 use OCP\IConfig;
 use OCP\ITempManager;
+use OCP\L10N\IFactory;
 use OCP\Server;
+use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
 /**
  * Class InstallerTest
  *
  * @package Test
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class InstallerTest extends TestCase {
 	private static $appid = 'testapp';
 	private $appstore;
-	/** @var AppFetcher|\PHPUnit\Framework\MockObject\MockObject */
-	private $appFetcher;
-	/** @var IClientService|\PHPUnit\Framework\MockObject\MockObject */
-	private $clientService;
-	/** @var ITempManager|\PHPUnit\Framework\MockObject\MockObject */
-	private $tempManager;
-	/** @var LoggerInterface|\PHPUnit\Framework\MockObject\MockObject */
-	private $logger;
-	/** @var IConfig|\PHPUnit\Framework\MockObject\MockObject */
-	private $config;
+	private AppFetcher&MockObject $appFetcher;
+	private IClientService&MockObject $clientService;
+	private ITempManager&MockObject $tempManager;
+	private LoggerInterface&MockObject $logger;
+	private IConfig&MockObject $config;
+	private AppManager&MockObject $appManager;
+	private IFactory&MockObject $l10nFactory;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -47,18 +48,13 @@ class InstallerTest extends TestCase {
 		$this->tempManager = $this->createMock(ITempManager::class);
 		$this->logger = $this->createMock(LoggerInterface::class);
 		$this->config = $this->createMock(IConfig::class);
+		$this->appManager = $this->createMock(AppManager::class);
+		$this->l10nFactory = $this->createMock(IFactory::class);
 
 		$config = Server::get(IConfig::class);
 		$this->appstore = $config->setSystemValue('appstoreenabled', true);
 		$config->setSystemValue('appstoreenabled', true);
-		$installer = new Installer(
-			Server::get(AppFetcher::class),
-			Server::get(IClientService::class),
-			Server::get(ITempManager::class),
-			Server::get(LoggerInterface::class),
-			$config,
-			false
-		);
+		$installer = Server::get(Installer::class);
 		$installer->removeApp(self::$appid);
 	}
 
@@ -69,19 +65,15 @@ class InstallerTest extends TestCase {
 			$this->tempManager,
 			$this->logger,
 			$this->config,
+			$this->appManager,
+			$this->l10nFactory,
 			false
 		);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
-		$installer = new Installer(
-			Server::get(AppFetcher::class),
-			Server::get(IClientService::class),
-			Server::get(ITempManager::class),
-			Server::get(LoggerInterface::class),
-			Server::get(IConfig::class),
-			false
-		);
+		$installer = Server::get(Installer::class);
 		$installer->removeApp(self::$appid);
 		Server::get(IConfig::class)->setSystemValue('appstoreenabled', $this->appstore);
 
@@ -93,14 +85,7 @@ class InstallerTest extends TestCase {
 		Server::get(IAppManager::class)->getAppVersion('testapp', true);
 
 		// Build installer
-		$installer = new Installer(
-			Server::get(AppFetcher::class),
-			Server::get(IClientService::class),
-			Server::get(ITempManager::class),
-			Server::get(LoggerInterface::class),
-			Server::get(IConfig::class),
-			false
-		);
+		$installer = Server::get(Installer::class);
 
 		// Extract app
 		$pathOfTestApp = __DIR__ . '/../data/testapp.zip';
@@ -158,12 +143,15 @@ class InstallerTest extends TestCase {
 			->expects($this->once())
 			->method('get')
 			->willReturn($appArray);
+		$this->appManager
+			->expects($this->exactly(2))
+			->method('getAppVersion')
+			->willReturn('1.0');
 
 		$installer = $this->getInstaller();
 		$this->assertSame($updateAvailable, $installer->isUpdateAvailable('files'));
 		$this->assertSame($updateAvailable, $installer->isUpdateAvailable('files'), 'Cached result should be returned and fetcher should be only called once');
 	}
-
 
 	public function testDownloadAppWithRevokedCertificate(): void {
 		$this->expectException(\Exception::class);
@@ -203,11 +191,9 @@ gLgK8d8sKL60JMmKHN3boHrsThKBVA==
 			->method('get')
 			->willReturn($appArray);
 
-
 		$installer = $this->getInstaller();
 		$installer->downloadApp('news');
 	}
-
 
 	public function testDownloadAppWithNotNextcloudCertificate(): void {
 		$this->expectException(\Exception::class);
@@ -251,7 +237,6 @@ YSu356M=
 		$installer->downloadApp('news');
 	}
 
-
 	public function testDownloadAppWithDifferentCN(): void {
 		$this->expectException(\Exception::class);
 		$this->expectExceptionMessage('App with id news has a cert issued to passman');
@@ -293,7 +278,6 @@ u/spPSSVhaun5BA1FlphB2TkgnzlCmxJa63nFY045e/Jq+IKMcqqZl/092gbI2EQ
 		$installer = $this->getInstaller();
 		$installer->downloadApp('news');
 	}
-
 
 	public function testDownloadAppWithInvalidSignature(): void {
 		$this->expectException(\Exception::class);
@@ -361,7 +345,6 @@ u/spPSSVhaun5BA1FlphB2TkgnzlCmxJa63nFY045e/Jq+IKMcqqZl/092gbI2EQ
 		$installer = $this->getInstaller();
 		$installer->downloadApp('passman');
 	}
-
 
 	public function testDownloadAppWithMoreThanOneFolderDownloaded(): void {
 		$this->expectException(\Exception::class);
@@ -445,7 +428,6 @@ YwDVP+QmNRzx72jtqAN/Kc3CvQ9nkgYhU65B95aX0xA=',
 		$installer = $this->getInstaller();
 		$installer->downloadApp('testapp');
 	}
-
 
 	public function testDownloadAppWithMismatchingIdentifier(): void {
 		$this->expectException(\Exception::class);
@@ -611,7 +593,6 @@ MPLX6f5V9tCJtlH6ztmEcDROfvuVc0U3rEhqx2hphoyo+MZrPFpdcJL8KkIdMKbY
 		$this->assertEquals('0.9', \OC_App::getAppVersionByPath(__DIR__ . '/../../apps/testapp/'));
 	}
 
-
 	public function testDownloadAppWithDowngrade(): void {
 		// Use previous test to download the application in version 0.9
 		$this->testDownloadAppSuccessful();
@@ -699,6 +680,11 @@ JXhrdaWDZ8fzpUjugrtC3qslsqL0dzgU37anS3HwrT8=',
 			->willReturn($client);
 		$this->assertTrue(file_exists(__DIR__ . '/../../apps/testapp/appinfo/info.xml'));
 		$this->assertEquals('0.9', \OC_App::getAppVersionByPath(__DIR__ . '/../../apps/testapp/'));
+
+		$this->appManager
+			->expects($this->once())
+			->method('getAppVersion')
+			->willReturn('0.9');
 
 		$installer = $this->getInstaller();
 		$installer->downloadApp('testapp');

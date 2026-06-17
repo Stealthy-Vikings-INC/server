@@ -5,6 +5,7 @@
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OCA\DAV\Connector\Sabre;
 
 use OC\Files\View;
@@ -14,6 +15,7 @@ use OCA\DAV\CalDAV\DefaultCalendarValidator;
 use OCA\DAV\CalDAV\Proxy\ProxyMapper;
 use OCA\DAV\DAV\CustomPropertiesBackend;
 use OCA\DAV\DAV\ViewOnlyPlugin;
+use OCA\DAV\Db\PropertyMapper;
 use OCA\DAV\Files\BrowserErrorPagePlugin;
 use OCA\DAV\Files\Sharing\RootCollection;
 use OCA\DAV\Upload\CleanupService;
@@ -27,6 +29,7 @@ use OCP\Files\IFilenameValidator;
 use OCP\Files\IRootFolder;
 use OCP\Files\Mount\IMountManager;
 use OCP\IConfig;
+use OCP\IDateTimeZone;
 use OCP\IDBConnection;
 use OCP\IGroupManager;
 use OCP\IL10N;
@@ -35,6 +38,7 @@ use OCP\IRequest;
 use OCP\ITagManager;
 use OCP\IUserManager;
 use OCP\IUserSession;
+use OCP\L10N\IFactory;
 use OCP\SabrePluginEvent;
 use OCP\SystemTag\ISystemTagManager;
 use OCP\SystemTag\ISystemTagObjectMapper;
@@ -68,14 +72,13 @@ class ServerFactory {
 		Plugin $authPlugin,
 		callable $viewCallBack,
 	): Server {
-		// Fire up server
-		if ($isPublicShare) {
-			$rootCollection = new SimpleCollection('root');
-			$tree = new CachingTree($rootCollection);
-		} else {
-			$rootCollection = null;
-			$tree = new ObjectTree();
-		}
+		// /public.php/webdav/ shows the files in the share in the root itself
+		// and not under /public.php/webdav/files/{token} so we should keep
+		// compatibility for that.
+		$needsSharesInRoot = $baseUri === '/public.php/webdav/';
+		$useCollection = $isPublicShare && !$needsSharesInRoot;
+		$debugEnabled = $this->config->getSystemValue('debug', false);
+		[$tree, $rootCollection] = $this->getTree($useCollection);
 		$server = new Server($tree);
 		// Set URL explicitly due to reverse-proxy situations
 		$server->httpRequest->setUrl($requestUri);
@@ -89,17 +92,25 @@ class ServerFactory {
 		));
 		$server->addPlugin(new AnonymousOptionsPlugin());
 		$server->addPlugin($authPlugin);
+		if ($debugEnabled) {
+			$server->debugEnabled = $debugEnabled;
+			$server->addPlugin(new PropFindMonitorPlugin());
+		}
+
+		$server->addPlugin(new PropFindPreloadNotifyPlugin());
 		// FIXME: The following line is a workaround for legacy components relying on being able to send a GET to /
 		$server->addPlugin(new DummyGetResponsePlugin());
 		$server->addPlugin(new ExceptionLoggerPlugin('webdav', $this->logger));
 		$server->addPlugin(new LockPlugin());
 
 		$server->addPlugin(new RequestIdHeaderPlugin($this->request));
+		$server->addPlugin(new UserIdHeaderPlugin($this->userSession));
 
 		$server->addPlugin(new ZipFolderPlugin(
 			$tree,
 			$this->logger,
 			$this->eventDispatcher,
+			\OCP\Server::get(IDateTimeZone::class),
 		));
 
 		// Some WebDAV clients do require Class 2 WebDAV support (locking), since
@@ -117,7 +128,8 @@ class ServerFactory {
 		}
 
 		// wait with registering these until auth is handled and the filesystem is setup
-		$server->on('beforeMethod:*', function () use ($server, $tree, $viewCallBack, $isPublicShare, $rootCollection): void {
+		$server->on('beforeMethod:*', function () use ($server,
+			$tree, $viewCallBack, $isPublicShare, $rootCollection, $debugEnabled): void {
 			// ensure the skeleton is copied
 			$userFolder = \OC::$server->getUserFolder();
 
@@ -136,36 +148,8 @@ class ServerFactory {
 				$root = new File($view, $rootInfo);
 			}
 
-			if ($isPublicShare) {
-				$userPrincipalBackend = new Principal(
-					\OCP\Server::get(IUserManager::class),
-					\OCP\Server::get(IGroupManager::class),
-					\OCP\Server::get(IAccountManager::class),
-					\OCP\Server::get(\OCP\Share\IManager::class),
-					\OCP\Server::get(IUserSession::class),
-					\OCP\Server::get(IAppManager::class),
-					\OCP\Server::get(ProxyMapper::class),
-					\OCP\Server::get(KnownUserService::class),
-					\OCP\Server::get(IConfig::class),
-					\OC::$server->getL10NFactory(),
-				);
-
-				// Mount the share collection at /public.php/dav/shares/<share token>
-				$rootCollection->addChild(new RootCollection(
-					$root,
-					$userPrincipalBackend,
-					'principals/shares',
-				));
-
-				// Mount the upload collection at /public.php/dav/uploads/<share token>
-				$rootCollection->addChild(new \OCA\DAV\Upload\RootCollection(
-					$userPrincipalBackend,
-					'principals/shares',
-					\OCP\Server::get(CleanupService::class),
-					\OCP\Server::get(IRootFolder::class),
-					\OCP\Server::get(IUserSession::class),
-					\OCP\Server::get(\OCP\Share\IManager::class),
-				));
+			if ($rootCollection !== null) {
+				$this->initRootCollection($rootCollection, $root);
 			} else {
 				/** @var ObjectTree $tree */
 				$tree->init($root, $view, $this->mountManager);
@@ -180,8 +164,8 @@ class ServerFactory {
 					$this->userSession,
 					\OCP\Server::get(IFilenameValidator::class),
 					\OCP\Server::get(IAccountManager::class),
-					false,
-					!$this->config->getSystemValue('debug', false)
+					$isPublicShare,
+					!$debugEnabled
 				)
 			);
 			$server->addPlugin(new QuotaPlugin($view));
@@ -197,7 +181,6 @@ class ServerFactory {
 				$server->addPlugin(new SharesPlugin(
 					$tree,
 					$this->userSession,
-					$userFolder,
 					\OCP\Server::get(\OCP\Share\IManager::class)
 				));
 				$server->addPlugin(new CommentPropertiesPlugin(\OCP\Server::get(ICommentsManager::class), $this->userSession));
@@ -220,12 +203,14 @@ class ServerFactory {
 							$tree,
 							$this->databaseConnection,
 							$this->userSession->getUser(),
+							\OCP\Server::get(PropertyMapper::class),
 							\OCP\Server::get(DefaultCalendarValidator::class),
 						)
 					)
 				);
 			}
 			$server->addPlugin(new CopyEtagHeaderPlugin());
+			$server->addPlugin(new AddExtraHeadersPlugin($this->logger, $isPublicShare));
 
 			// Load dav plugins from apps
 			$event = new SabrePluginEvent($server);
@@ -239,5 +224,62 @@ class ServerFactory {
 			}
 		}, 30); // priority 30: after auth (10) and acl(20), before lock(50) and handling the request
 		return $server;
+	}
+
+	/**
+	 * Returns a Tree object and, if $useCollection is true, the collection used
+	 * as root.
+	 *
+	 * @param bool $useCollection Whether to use a collection or the legacy
+	 *                            ObjectTree, which doesn't use collections.
+	 * @return array{0: CachingTree|ObjectTree, 1: SimpleCollection|null}
+	 */
+	public function getTree(bool $useCollection): array {
+		if ($useCollection) {
+			$rootCollection = new SimpleCollection('root');
+			$tree = new CachingTree($rootCollection);
+			return [$tree, $rootCollection];
+		}
+
+		return [new ObjectTree(), null];
+	}
+
+	/**
+	 * Adds the user's principal backend to $rootCollection.
+	 */
+	private function initRootCollection(SimpleCollection $rootCollection, Directory|File $root): void {
+		$userPrincipalBackend = new Principal(
+			\OCP\Server::get(IUserManager::class),
+			\OCP\Server::get(IGroupManager::class),
+			\OCP\Server::get(IAccountManager::class),
+			\OCP\Server::get(\OCP\Share\IManager::class),
+			\OCP\Server::get(IUserSession::class),
+			\OCP\Server::get(IAppManager::class),
+			\OCP\Server::get(ProxyMapper::class),
+			\OCP\Server::get(KnownUserService::class),
+			\OCP\Server::get(IConfig::class),
+			\OCP\Server::get(IFactory::class),
+		);
+
+		// Mount the share collection at /public.php/dav/files/<share token>
+		$rootCollection->addChild(
+			new RootCollection(
+				$root,
+				$userPrincipalBackend,
+				'principals/shares',
+			)
+		);
+
+		// Mount the upload collection at /public.php/dav/uploads/<share token>
+		$rootCollection->addChild(
+			new \OCA\DAV\Upload\RootCollection(
+				$userPrincipalBackend,
+				'principals/shares',
+				\OCP\Server::get(CleanupService::class),
+				\OCP\Server::get(IRootFolder::class),
+				\OCP\Server::get(IUserSession::class),
+				\OCP\Server::get(\OCP\Share\IManager::class),
+			)
+		);
 	}
 }

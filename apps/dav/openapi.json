@@ -30,13 +30,25 @@
                         "type": "object",
                         "required": [
                             "chunking",
-                            "public_shares_chunking"
+                            "public_shares_chunking",
+                            "search_supports_creation_time",
+                            "search_supports_upload_time",
+                            "search_supports_last_activity"
                         ],
                         "properties": {
                             "chunking": {
                                 "type": "string"
                             },
                             "public_shares_chunking": {
+                                "type": "boolean"
+                            },
+                            "search_supports_creation_time": {
+                                "type": "boolean"
+                            },
+                            "search_supports_upload_time": {
+                                "type": "boolean"
+                            },
+                            "search_supports_last_activity": {
                                 "type": "boolean"
                             },
                             "bulkupload": {
@@ -220,8 +232,7 @@
                             "schema": {
                                 "type": "object",
                                 "required": [
-                                    "fileId",
-                                    "expirationTime"
+                                    "fileId"
                                 ],
                                 "properties": {
                                     "fileId": {
@@ -373,6 +384,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -461,27 +500,52 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "required": [
-                                        "ocs"
-                                    ],
-                                    "properties": {
-                                        "ocs": {
+                                    "anyOf": [
+                                        {
                                             "type": "object",
                                             "required": [
-                                                "meta",
-                                                "data"
+                                                "ocs"
                                             ],
                                             "properties": {
-                                                "meta": {
-                                                    "$ref": "#/components/schemas/OCSMeta"
-                                                },
-                                                "data": {
-                                                    "nullable": true
+                                                "ocs": {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "meta",
+                                                        "data"
+                                                    ],
+                                                    "properties": {
+                                                        "meta": {
+                                                            "$ref": "#/components/schemas/OCSMeta"
+                                                        },
+                                                        "data": {
+                                                            "nullable": true
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "type": "object",
+                                            "required": [
+                                                "ocs"
+                                            ],
+                                            "properties": {
+                                                "ocs": {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "meta",
+                                                        "data"
+                                                    ],
+                                                    "properties": {
+                                                        "meta": {
+                                                            "$ref": "#/components/schemas/OCSMeta"
+                                                        },
+                                                        "data": {}
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
+                                    ]
                                 }
                             }
                         }
@@ -585,6 +649,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -679,6 +771,34 @@
                                                 "data": {
                                                     "nullable": true
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
                                             }
                                         }
                                     }
@@ -839,27 +959,52 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "required": [
-                                        "ocs"
-                                    ],
-                                    "properties": {
-                                        "ocs": {
+                                    "anyOf": [
+                                        {
                                             "type": "object",
                                             "required": [
-                                                "meta",
-                                                "data"
+                                                "ocs"
                                             ],
                                             "properties": {
-                                                "meta": {
-                                                    "$ref": "#/components/schemas/OCSMeta"
-                                                },
-                                                "data": {
-                                                    "nullable": true
+                                                "ocs": {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "meta",
+                                                        "data"
+                                                    ],
+                                                    "properties": {
+                                                        "meta": {
+                                                            "$ref": "#/components/schemas/OCSMeta"
+                                                        },
+                                                        "data": {
+                                                            "nullable": true
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "type": "object",
+                                            "required": [
+                                                "ocs"
+                                            ],
+                                            "properties": {
+                                                "ocs": {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "meta",
+                                                        "data"
+                                                    ],
+                                                    "properties": {
+                                                        "meta": {
+                                                            "$ref": "#/components/schemas/OCSMeta"
+                                                        },
+                                                        "data": {}
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
+                                    ]
                                 }
                             }
                         }
@@ -966,27 +1111,52 @@
                         "content": {
                             "application/json": {
                                 "schema": {
-                                    "type": "object",
-                                    "required": [
-                                        "ocs"
-                                    ],
-                                    "properties": {
-                                        "ocs": {
+                                    "anyOf": [
+                                        {
                                             "type": "object",
                                             "required": [
-                                                "meta",
-                                                "data"
+                                                "ocs"
                                             ],
                                             "properties": {
-                                                "meta": {
-                                                    "$ref": "#/components/schemas/OCSMeta"
-                                                },
-                                                "data": {
-                                                    "nullable": true
+                                                "ocs": {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "meta",
+                                                        "data"
+                                                    ],
+                                                    "properties": {
+                                                        "meta": {
+                                                            "$ref": "#/components/schemas/OCSMeta"
+                                                        },
+                                                        "data": {
+                                                            "nullable": true
+                                                        }
+                                                    }
+                                                }
+                                            }
+                                        },
+                                        {
+                                            "type": "object",
+                                            "required": [
+                                                "ocs"
+                                            ],
+                                            "properties": {
+                                                "ocs": {
+                                                    "type": "object",
+                                                    "required": [
+                                                        "meta",
+                                                        "data"
+                                                    ],
+                                                    "properties": {
+                                                        "meta": {
+                                                            "$ref": "#/components/schemas/OCSMeta"
+                                                        },
+                                                        "data": {}
+                                                    }
                                                 }
                                             }
                                         }
-                                    }
+                                    ]
                                 }
                             }
                         }

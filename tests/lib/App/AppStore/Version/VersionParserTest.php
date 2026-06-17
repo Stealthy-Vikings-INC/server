@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
@@ -12,9 +14,9 @@ use OC\App\AppStore\Version\VersionParser;
 use Test\TestCase;
 
 class VersionParserTest extends TestCase {
-	/** @var VersionParser */
-	private $versionParser;
+	private VersionParser $versionParser;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->versionParser = new VersionParser();
@@ -67,14 +69,12 @@ class VersionParserTest extends TestCase {
 		$this->assertEquals($expected, $this->versionParser->getVersion($input));
 	}
 
-
 	public function testGetVersionException(): void {
 		$this->expectException(\Exception::class);
 		$this->expectExceptionMessage('Version cannot be parsed: BogusVersion');
 
 		$this->versionParser->getVersion('BogusVersion');
 	}
-
 
 	public function testGetVersionExceptionWithMultiple(): void {
 		$this->expectException(\Exception::class);

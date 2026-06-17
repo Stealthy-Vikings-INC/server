@@ -3,21 +3,17 @@
  - SPDX-License-Identifier: AGPL-3.0-or-later
 -->
 <template>
-	<div class="header-menu unified-search-menu">
-		<NcButton v-show="!showLocalSearch"
-			class="header-menu__trigger"
-			:aria-label="t('core', 'Unified search')"
-			type="tertiary-no-background"
-			@click="toggleUnifiedSearch">
-			<template #icon>
-				<Magnify class="header-menu__trigger-icon" :size="20" />
-			</template>
-		</NcButton>
-		<UnifiedSearchLocalSearchBar v-if="supportsLocalSearch"
+	<div class="unified-search-menu">
+		<UnifiedSearchInput
+			:expanded="showUnifiedSearch || showLocalSearch"
+			@click="toggleUnifiedSearch" />
+		<UnifiedSearchLocalSearchBar
+			v-if="supportsLocalSearch"
 			:open.sync="showLocalSearch"
 			:query.sync="queryText"
 			@global-search="openModal" />
-		<UnifiedSearchModal :local-search="supportsLocalSearch"
+		<UnifiedSearchModal
+			:local-search="supportsLocalSearch"
 			:query.sync="queryText"
 			:open.sync="showUnifiedSearch" />
 	</div>
@@ -25,26 +21,22 @@
 
 <script lang="ts">
 import { emit, subscribe } from '@nextcloud/event-bus'
-import { translate } from '@nextcloud/l10n'
+import { t } from '@nextcloud/l10n'
 import { useBrowserLocation } from '@vueuse/core'
-import { defineComponent } from 'vue'
-
-import NcButton from '@nextcloud/vue/components/NcButton'
-import Magnify from 'vue-material-design-icons/Magnify.vue'
-import UnifiedSearchModal from '../components/UnifiedSearch/UnifiedSearchModal.vue'
-import UnifiedSearchLocalSearchBar from '../components/UnifiedSearch/UnifiedSearchLocalSearchBar.vue'
-
 import debounce from 'debounce'
-import logger from '../logger'
+import { defineComponent } from 'vue'
+import UnifiedSearchInput from '../components/UnifiedSearch/UnifiedSearchInput.vue'
+import UnifiedSearchLocalSearchBar from '../components/UnifiedSearch/UnifiedSearchLocalSearchBar.vue'
+import UnifiedSearchModal from '../components/UnifiedSearch/UnifiedSearchModal.vue'
+import logger from '../logger.js'
 
 export default defineComponent({
 	name: 'UnifiedSearch',
 
 	components: {
-		NcButton,
-		Magnify,
 		UnifiedSearchModal,
 		UnifiedSearchLocalSearchBar,
+		UnifiedSearchInput,
 	},
 
 	setup() {
@@ -52,7 +44,8 @@ export default defineComponent({
 
 		return {
 			currentLocation,
-			t: translate,
+
+			t,
 		}
 	},
 
@@ -80,7 +73,17 @@ export default defineComponent({
 		 */
 		supportsLocalSearch() {
 			// TODO: Make this an API
-			const providerPaths = ['/settings/users', '/apps/deck', '/settings/apps']
+			const providerPaths = ['/apps/deck']
+			return providerPaths.some((path) => this.currentLocation.pathname?.includes?.(path))
+		},
+
+		/**
+		 * Current page handles the Ctrl+F shortcut itself (e.g. has a dedicated
+		 * search input). UnifiedSearch should stay out of the way on these pages.
+		 */
+		appHandlesSearchShortcut() {
+			// TODO: Make this an API
+			const providerPaths = ['/settings/users', '/settings/apps']
 			return providerPaths.some((path) => this.currentLocation.pathname?.includes?.(path))
 		},
 	},
@@ -127,10 +130,15 @@ export default defineComponent({
 	methods: {
 		/**
 		 * Handle the key down event to open search on `ctrl + F`
+		 *
 		 * @param event The keyboard event
 		 */
 		onKeyDown(event: KeyboardEvent) {
-			if (event.ctrlKey && event.code === 'KeyF') {
+			if (event.ctrlKey && event.key === 'f') {
+				// Skip on pages that handle Ctrl+F themselves (e.g. a dedicated search input).
+				if (this.appHandlesSearchShortcut) {
+					return
+				}
 				// only handle search if not already open - in this case the browser native search should be used
 				if (!this.showLocalSearch && !this.showUnifiedSearch) {
 					event.preventDefault()
@@ -175,31 +183,9 @@ export default defineComponent({
 
 <style lang="scss" scoped>
 // this is needed to allow us overriding component styles (focus-visible)
-#header {
-	.header-menu {
-		display: flex;
-		align-items: center;
-		justify-content: center;
-
-		&__trigger {
-			height: var(--header-height);
-			width: var(--header-height) !important;
-
-			&:focus-visible {
-				// align with other header menu entries
-				outline: none !important;
-				box-shadow: none !important;
-			}
-
-			&:not(:hover,:focus,:focus-visible) {
-				opacity: .85;
-			}
-
-			&-icon {
-				// ensure the icon has the correct color
-				color: var(--color-background-plain-text) !important;
-			}
-		}
-	}
+.unified-search-menu {
+	display: flex;
+	align-items: center;
+	justify-content: center;
 }
 </style>

@@ -4,6 +4,7 @@
  * SPDX-FileCopyrightText: 2023 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OC\Share20;
 
 use OCP\Cache\CappedMemoryCache;
@@ -38,7 +39,7 @@ class ShareDisableChecker {
 
 		if ($excludeGroups && $excludeGroups !== 'no') {
 			$groupsList = $this->config->getAppValue('core', 'shareapi_exclude_groups_list', '');
-			$excludedGroups = json_decode($groupsList);
+			$excludedGroups = json_decode($groupsList, true);
 			if (is_null($excludedGroups)) {
 				$excludedGroups = explode(',', $groupsList);
 				$newValue = json_encode($excludedGroups);

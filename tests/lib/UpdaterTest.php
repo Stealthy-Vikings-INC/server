@@ -11,6 +11,8 @@ namespace Test;
 use OC\Installer;
 use OC\IntegrityCheck\Checker;
 use OC\Updater;
+use OCP\App\AppPathNotFoundException;
+use OCP\App\IAppManager;
 use OCP\IAppConfig;
 use OCP\IConfig;
 use OCP\ServerVersion;
@@ -32,7 +34,9 @@ class UpdaterTest extends TestCase {
 	private $checker;
 	/** @var Installer|MockObject */
 	private $installer;
+	private IAppManager&MockObject $appManager;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->serverVersion = $this->createMock(ServerVersion::class);
@@ -41,6 +45,7 @@ class UpdaterTest extends TestCase {
 		$this->logger = $this->createMock(LoggerInterface::class);
 		$this->checker = $this->createMock(Checker::class);
 		$this->installer = $this->createMock(Installer::class);
+		$this->appManager = $this->createMock(IAppManager::class);
 
 		$this->updater = new Updater(
 			$this->serverVersion,
@@ -48,7 +53,8 @@ class UpdaterTest extends TestCase {
 			$this->appConfig,
 			$this->checker,
 			$this->logger,
-			$this->installer
+			$this->installer,
+			$this->appManager,
 		);
 	}
 
@@ -102,5 +108,37 @@ class UpdaterTest extends TestCase {
 			->willReturn($vendor);
 
 		$this->assertSame($result, $this->updater->isUpgradePossible($oldVersion, $newVersion, $allowedVersions));
+	}
+
+	public function testUpgradeAppStoreAppsRestoresMissingAutoDisabledAppBeforeEnabling(): void {
+		$this->installer->expects($this->once())
+			->method('isUpdateAvailable')
+			->with('mailroundcube')
+			->willReturn(false);
+
+		$this->installer->expects($this->once())
+			->method('downloadApp')
+			->with('mailroundcube');
+
+		$this->installer->expects($this->once())
+			->method('installApp')
+			->with('mailroundcube');
+
+		$this->appManager->expects($this->once())
+			->method('getAppPath')
+			->with('mailroundcube', true)
+			->willThrowException(new AppPathNotFoundException('missing'));
+
+		$this->appManager->expects($this->once())
+			->method('enableApp')
+			->with('mailroundcube');
+
+		$this->appManager->expects($this->never())
+			->method('enableAppForGroups');
+
+		self::invokePrivate($this->updater, 'upgradeAppStoreApps', [
+			['mailroundcube'],
+			['mailroundcube' => 'yes'],
+		]);
 	}
 }

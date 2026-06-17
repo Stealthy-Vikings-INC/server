@@ -15,6 +15,7 @@ use OCP\AppFramework\Services\IAppConfig;
 use OCP\Files\AppData\IAppDataFactory;
 use OCP\Files\IAppData;
 use OCP\Files\NotFoundException;
+use OCP\IL10N;
 use Psr\Log\LoggerInterface;
 use Symfony\Component\Uid\Uuid;
 
@@ -26,6 +27,7 @@ class ExampleContactService {
 		private readonly IAppConfig $appConfig,
 		private readonly LoggerInterface $logger,
 		private readonly CardDavBackend $cardDav,
+		private readonly IL10N $l,
 	) {
 		$this->appData = $appDataFactory->get(Application::APP_ID);
 	}
@@ -52,12 +54,27 @@ class ExampleContactService {
 		return $folder->getFile('defaultContact.vcf')->getContent();
 	}
 
-	public function setCard(?string $cardData = null) {
-		try {
-			$folder = $this->appData->getFolder('defaultContact');
-		} catch (NotFoundException $e) {
-			$folder = $this->appData->newFolder('defaultContact');
+	private function createInitialDefaultContact(): void {
+		if ($this->defaultContactExists()) {
+			return;
 		}
+		try {
+			$folder = $this->appData->newFolder('defaultContact');
+			$cardData = file_get_contents(__DIR__ . '/../ExampleContentFiles/exampleContact.vcf');
+			if (!$cardData) {
+				throw new \Exception('Could not read exampleContact.vcf');
+			}
+			$file = (!$folder->fileExists('defaultContact.vcf')) ? $folder->newFile('defaultContact.vcf') : $folder->getFile('defaultContact.vcf');
+			$file->putContent($cardData);
+			$this->appConfig->setAppValueBool('hasCustomDefaultContact', false);
+
+		} catch (\Exception $e) {
+			$this->logger->error('Could not create initial default contact', ['exception' => $e]);
+		}
+	}
+
+	public function setCard(?string $cardData = null) {
+		$folder = $this->appData->getFolder('defaultContact');
 
 		$isCustom = true;
 		if (is_null($cardData)) {
@@ -69,7 +86,7 @@ class ExampleContactService {
 			throw new \Exception('Could not read exampleContact.vcf');
 		}
 
-		$file = (!$folder->fileExists('defaultContact.vcf')) ? $folder->newFile('defaultContact.vcf') : $folder->getFile('defaultContact.vcf');
+		$file = $folder->getFile('defaultContact.vcf');
 		$file->putContent($cardData);
 
 		$this->appConfig->setAppValueBool('hasCustomDefaultContact', $isCustom);
@@ -87,6 +104,10 @@ class ExampleContactService {
 	public function createDefaultContact(int $addressBookId): void {
 		if (!$this->isDefaultContactEnabled()) {
 			return;
+		}
+
+		if (!$this->defaultContactExists()) {
+			$this->createInitialDefaultContact();
 		}
 
 		try {
@@ -111,6 +132,9 @@ class ExampleContactService {
 			$vcard->REV->setValue($newRev);
 		} else {
 			$vcard->add('REV', $newRev);
+		}
+		if (!$vcard->Note) {
+			$vcard->add('note', $this->l->t('This is an example contact'));
 		}
 
 		// Level 3 means that the document is invalid

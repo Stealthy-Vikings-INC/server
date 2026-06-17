@@ -24,6 +24,7 @@ use OCP\Constants;
 use OCP\Defaults;
 use OCP\EventDispatcher\IEventDispatcher;
 use OCP\Files\File;
+use OCP\Files\Template\ITemplateManager;
 use OCP\IAppConfig;
 use OCP\IConfig;
 use OCP\IL10N;
@@ -49,15 +50,18 @@ class DefaultPublicShareTemplateProvider implements IPublicShareTemplateProvider
 		private Defaults $defaults,
 		private IConfig $config,
 		private IRequest $request,
+		private ITemplateManager $templateManager,
 		private IInitialState $initialState,
 		private IAppConfig $appConfig,
 	) {
 	}
 
+	#[\Override]
 	public function shouldRespond(IShare $share): bool {
 		return true;
 	}
 
+	#[\Override]
 	public function renderPage(IShare $share, string $token, string $path): TemplateResponse {
 		$shareNode = $share->getNode();
 		$ownerName = '';
@@ -119,6 +123,8 @@ class DefaultPublicShareTemplateProvider implements IPublicShareTemplateProvider
 			$this->eventDispatcher->dispatchTyped(new LoadViewer());
 		}
 
+		$this->initialState->provideInitialState('templates', $this->templateManager->listCreators());
+
 		// Allow external apps to register their scripts
 		$this->eventDispatcher->dispatchTyped(new BeforeTemplateRenderedEvent($share));
 
@@ -149,7 +155,7 @@ class DefaultPublicShareTemplateProvider implements IPublicShareTemplateProvider
 
 		// Create the header action menu
 		$headerActions = [];
-		if ($view !== 'public-file-drop' && !$share->getHideDownload()) {
+		if ($share->canDownload() && !$share->getHideDownload()) {
 			// The download URL is used for the "download" header action as well as in some cases for the direct link
 			$downloadUrl = $this->urlGenerator->getAbsoluteURL('/public.php/dav/files/' . $token . '/?accept=zip');
 
@@ -250,7 +256,6 @@ class DefaultPublicShareTemplateProvider implements IPublicShareTemplateProvider
 			Util::addHeader('meta', ['property' => 'og:video', 'content' => $video]);
 			Util::addHeader('meta', ['property' => 'og:video:type', 'content' => $shareNode->getMimeType()]);
 		}
-
 
 		// Twitter Support: https://developer.x.com/en/docs/x-for-websites/cards/overview/markup
 		Util::addHeader('meta', ['property' => 'twitter:title', 'content' => $title]);

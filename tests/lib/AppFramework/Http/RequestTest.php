@@ -5,6 +5,7 @@
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace Test\AppFramework\Http;
 
 use OC\AppFramework\Http\Request;
@@ -28,6 +29,7 @@ class RequestTest extends \Test\TestCase {
 	/** @var CsrfTokenManager */
 	protected $csrfTokenManager;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -43,6 +45,7 @@ class RequestTest extends \Test\TestCase {
 			->getMock();
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		stream_wrapper_unregister('fakeinput');
 		parent::tearDown();
@@ -99,8 +102,6 @@ class RequestTest extends \Test\TestCase {
 		$this->assertSame('Johnny Weissmüller', $request->{'name'});
 	}
 
-
-
 	public function testImmutableArrayAccess(): void {
 		$this->expectException(\RuntimeException::class);
 
@@ -120,7 +121,6 @@ class RequestTest extends \Test\TestCase {
 		$request['nickname'] = 'Janey';
 	}
 
-
 	public function testImmutableMagicAccess(): void {
 		$this->expectException(\RuntimeException::class);
 
@@ -139,7 +139,6 @@ class RequestTest extends \Test\TestCase {
 
 		$request->{'nickname'} = 'Janey';
 	}
-
 
 	public function testGetTheMethodRight(): void {
 		$this->expectException(\LogicException::class);
@@ -520,7 +519,6 @@ class RequestTest extends \Test\TestCase {
 		$this->fail('Expected LogicException.');
 	}
 
-
 	public function testSetUrlParameters(): void {
 		$vars = [
 			'post' => [],
@@ -751,7 +749,6 @@ class RequestTest extends \Test\TestCase {
 			['InvalidProvider/1.1', 'HTTP/1.1'],
 			[null, 'HTTP/1.1'],
 			['', 'HTTP/1.1'],
-
 		];
 	}
 
@@ -777,12 +774,12 @@ class RequestTest extends \Test\TestCase {
 		$this->assertSame($expected, $request->getHttpProtocol());
 	}
 
-	public function testGetServerProtocolWithOverride(): void {
+	public function testGetServerProtocolWithOverrideValid(): void {
 		$this->config
 			->expects($this->exactly(3))
 			->method('getSystemValueString')
 			->willReturnMap([
-				['overwriteprotocol', '', 'customProtocol'],
+				['overwriteprotocol', '', 'HTTPS'], // should be automatically lowercased
 				['overwritecondaddr', '', ''],
 			]);
 
@@ -794,7 +791,27 @@ class RequestTest extends \Test\TestCase {
 			$this->stream
 		);
 
-		$this->assertSame('customProtocol', $request->getServerProtocol());
+		$this->assertSame('https', $request->getServerProtocol());
+	}
+
+	public function testGetServerProtocolWithOverrideInValid(): void {
+		$this->config
+			->expects($this->exactly(3))
+			->method('getSystemValueString')
+			->willReturnMap([
+				['overwriteprotocol', '', 'bogusProtocol'], // should trigger fallback to http
+				['overwritecondaddr', '', ''],
+			]);
+
+		$request = new Request(
+			[],
+			$this->requestId,
+			$this->config,
+			$this->csrfTokenManager,
+			$this->stream
+		);
+
+		$this->assertSame('http', $request->getServerProtocol());
 	}
 
 	public function testGetServerProtocolWithProtoValid(): void {
@@ -832,7 +849,6 @@ class RequestTest extends \Test\TestCase {
 			$this->csrfTokenManager,
 			$this->stream
 		);
-
 
 		$this->assertSame('https', $requestHttps->getServerProtocol());
 		$this->assertSame('http', $requestHttp->getServerProtocol());
@@ -1436,7 +1452,6 @@ class RequestTest extends \Test\TestCase {
 		$this->assertSame('www.owncloud.org', self::invokePrivate($request, 'getOverwriteHost'));
 	}
 
-
 	public function testGetPathInfoNotProcessible(): void {
 		$this->expectException(\Exception::class);
 		$this->expectExceptionMessage('The requested uri(/foo.php) cannot be processed by the script \'/var/www/index.php\')');
@@ -1456,7 +1471,6 @@ class RequestTest extends \Test\TestCase {
 
 		$request->getPathInfo();
 	}
-
 
 	public function testGetRawPathInfoNotProcessible(): void {
 		$this->expectException(\Exception::class);
@@ -1592,6 +1606,68 @@ class RequestTest extends \Test\TestCase {
 		return [
 			['/foo%2Fbar/subfolder', '', 'foo/bar/subfolder'],
 		];
+	}
+
+	public function testGetRawPathInfoWithoutScriptName(): void {
+		$request = new Request(
+			[
+				'server' => [
+					'REQUEST_URI' => '/index.php/apps/files/',
+				]
+			],
+			$this->requestId,
+			$this->config,
+			$this->csrfTokenManager,
+			$this->stream
+		);
+
+		$this->assertSame('index.php/apps/files/', $request->getRawPathInfo());
+	}
+
+	public function testGetPathInfoWithoutScriptName(): void {
+		$request = new Request(
+			[
+				'server' => [
+					'REQUEST_URI' => '/index.php/apps/files/',
+				]
+			],
+			$this->requestId,
+			$this->config,
+			$this->csrfTokenManager,
+			$this->stream
+		);
+
+		$this->assertSame('index.php/apps/files/', $request->getPathInfo());
+	}
+
+	public function testGetRawPathInfoWithoutScriptNameRoot(): void {
+		$request = new Request(
+			[
+				'server' => [
+					'REQUEST_URI' => '/',
+				]
+			],
+			$this->requestId,
+			$this->config,
+			$this->csrfTokenManager,
+			$this->stream
+		);
+
+		$this->assertSame('', $request->getRawPathInfo());
+	}
+
+	public function testGetRawPathInfoWithoutScriptNameOrRequestUri(): void {
+		$request = new Request(
+			[
+				'server' => []
+			],
+			$this->requestId,
+			$this->config,
+			$this->csrfTokenManager,
+			$this->stream
+		);
+
+		$this->assertSame('', $request->getRawPathInfo());
 	}
 
 	public function testGetRequestUriWithoutOverwrite(): void {

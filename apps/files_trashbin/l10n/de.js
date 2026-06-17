@@ -12,7 +12,6 @@ OC.L10N.register(
     "Confirm permanent deletion" : "Endgültiges Löschen bestätigen",
     "Are you sure you want to permanently delete all files and folders in the trash? This cannot be undone." : "Möchtest du wirklich alle Dateien und Ordner im Papierkorb endgültig löschen? Dies kann nicht rückgängig gemacht werden.",
     "Cancel" : "Abbrechen",
-    "Deletion cancelled" : "Löschen abgebrochen",
     "Original location" : "Ursprünglicher Ort",
     "Deleted by" : "Gelöscht von",
     "Deleted" : "Gelöscht",

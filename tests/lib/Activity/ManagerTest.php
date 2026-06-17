@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -8,9 +10,11 @@
 
 namespace Test\Activity;
 
+use OC\Activity\Manager;
 use OCP\Activity\Exceptions\IncompleteActivityException;
 use OCP\Activity\IConsumer;
 use OCP\Activity\IEvent;
+use OCP\AppFramework\Utility\ITimeFactory;
 use OCP\IConfig;
 use OCP\IL10N;
 use OCP\IRequest;
@@ -22,15 +26,16 @@ use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
 class ManagerTest extends TestCase {
-	/** @var \OC\Activity\Manager */
-	private $activityManager;
+	private Manager $activityManager;
 
 	protected IRequest&MockObject $request;
 	protected IUserSession&MockObject $session;
 	protected IConfig&MockObject $config;
 	protected IValidator&MockObject $validator;
 	protected IRichTextFormatter&MockObject $richTextFormatter;
+	private ITimeFactory&MockObject $time;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -39,14 +44,16 @@ class ManagerTest extends TestCase {
 		$this->config = $this->createMock(IConfig::class);
 		$this->validator = $this->createMock(IValidator::class);
 		$this->richTextFormatter = $this->createMock(IRichTextFormatter::class);
+		$this->time = $this->createMock(ITimeFactory::class);
 
-		$this->activityManager = new \OC\Activity\Manager(
+		$this->activityManager = new Manager(
 			$this->request,
 			$this->session,
 			$this->config,
 			$this->validator,
 			$this->richTextFormatter,
-			$this->createMock(IL10N::class)
+			$this->createMock(IL10N::class),
+			$this->time,
 		);
 
 		$this->assertSame([], self::invokePrivate($this->activityManager, 'getConsumers'));
@@ -64,7 +71,6 @@ class ManagerTest extends TestCase {
 
 		$this->assertNotEmpty($consumers);
 	}
-
 
 	public function testGetConsumersInvalidConsumer(): void {
 		$this->expectException(\InvalidArgumentException::class);
@@ -154,14 +160,12 @@ class ManagerTest extends TestCase {
 			->willReturn($mockUser);
 	}
 
-
 	public function testPublishExceptionNoApp(): void {
 		$this->expectException(IncompleteActivityException::class);
 
 		$event = $this->activityManager->generateEvent();
 		$this->activityManager->publish($event);
 	}
-
 
 	public function testPublishExceptionNoType(): void {
 		$this->expectException(IncompleteActivityException::class);
@@ -171,7 +175,6 @@ class ManagerTest extends TestCase {
 		$this->activityManager->publish($event);
 	}
 
-
 	public function testPublishExceptionNoAffectedUser(): void {
 		$this->expectException(IncompleteActivityException::class);
 
@@ -180,7 +183,6 @@ class ManagerTest extends TestCase {
 			->setType('test_type');
 		$this->activityManager->publish($event);
 	}
-
 
 	public function testPublishExceptionNoSubject(): void {
 		$this->expectException(IncompleteActivityException::class);
@@ -217,6 +219,11 @@ class ManagerTest extends TestCase {
 				->willReturn($authorObject);
 		}
 
+		$time = time();
+		$this->time
+			->method('getTime')
+			->willReturn($time);
+
 		$event = $this->activityManager->generateEvent();
 		$event->setApp('test')
 			->setType('test_type')
@@ -230,9 +237,8 @@ class ManagerTest extends TestCase {
 		$consumer->expects($this->once())
 			->method('receive')
 			->with($event)
-			->willReturnCallback(function (IEvent $event) use ($expected): void {
-				$this->assertLessThanOrEqual(time() + 2, $event->getTimestamp(), 'Timestamp not set correctly');
-				$this->assertGreaterThanOrEqual(time() - 2, $event->getTimestamp(), 'Timestamp not set correctly');
+			->willReturnCallback(function (IEvent $event) use ($expected, $time): void {
+				$this->assertEquals($time, $event->getTimestamp(), 'Timestamp not set correctly');
 				$this->assertSame($expected, $event->getAuthor(), 'Author name not set correctly');
 			});
 		$this->activityManager->registerConsumer(function () use ($consumer) {
@@ -284,6 +290,7 @@ class ManagerTest extends TestCase {
 }
 
 class NoOpConsumer implements IConsumer {
+	#[\Override]
 	public function receive(IEvent $event) {
 	}
 }

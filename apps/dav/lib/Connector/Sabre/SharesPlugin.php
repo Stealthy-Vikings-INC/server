@@ -5,16 +5,21 @@
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OCA\DAV\Connector\Sabre;
 
 use OC\Share20\Exception\BackendError;
+use OCA\DAV\Connector\Sabre\Exception\Forbidden;
 use OCA\DAV\Connector\Sabre\Node as DavNode;
 use OCP\Files\Folder;
 use OCP\Files\Node;
 use OCP\Files\NotFoundException;
+use OCP\Files\Storage\ISharedStorage;
 use OCP\IUserSession;
 use OCP\Share\IManager;
 use OCP\Share\IShare;
+use Sabre\DAV\Exception\NotFound;
+use Sabre\DAV\ICollection;
 use Sabre\DAV\PropFind;
 use Sabre\DAV\Server;
 use Sabre\DAV\Tree;
@@ -28,23 +33,24 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 	public const SHARETYPES_PROPERTYNAME = '{http://owncloud.org/ns}share-types';
 	public const SHAREES_PROPERTYNAME = '{http://nextcloud.org/ns}sharees';
 
-	/**
-	 * Reference to main server object
-	 *
-	 * @var \Sabre\DAV\Server
-	 */
-	private $server;
+	private \Sabre\DAV\Server $server;
 	private string $userId;
 
 	/** @var IShare[][] */
 	private array $cachedShares = [];
-	/** @var string[] */
+
+	/**
+	 * Tracks which folders have been cached.
+	 * When a folder is cached, it will appear with its path as key and true
+	 * as value.
+	 *
+	 * @var bool[]
+	 */
 	private array $cachedFolders = [];
 
 	public function __construct(
 		private Tree $tree,
-		private IUserSession $userSession,
-		private Folder $userFolder,
+		IUserSession $userSession,
 		private IManager $shareManager,
 	) {
 		$this->userId = $userSession->getUser()->getUID();
@@ -60,6 +66,7 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 	 *
 	 * @return void
 	 */
+	#[\Override]
 	public function initialize(Server $server) {
 		$server->xml->namespaceMap[self::NS_OWNCLOUD] = 'oc';
 		$server->xml->elementMap[self::SHARETYPES_PROPERTYNAME] = ShareTypeList::class;
@@ -67,7 +74,10 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 		$server->protectedProperties[] = self::SHAREES_PROPERTYNAME;
 
 		$this->server = $server;
-		$this->server->on('propFind', [$this, 'handleGetProperties']);
+		$this->server->on('preloadCollection', $this->preloadCollection(...));
+		$this->server->on('propFind', $this->handleGetProperties(...));
+		$this->server->on('beforeCopy', $this->validateMoveOrCopy(...));
+		$this->server->on('beforeMove', $this->validateMoveOrCopy(...));
 	}
 
 	/**
@@ -85,32 +95,31 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 			IShare::TYPE_ROOM,
 			IShare::TYPE_CIRCLE,
 			IShare::TYPE_DECK,
-			IShare::TYPE_SCIENCEMESH,
 		];
 
 		foreach ($requestedShareTypes as $requestedShareType) {
-			$result = array_merge($result, $this->shareManager->getSharesBy(
+			$result[] = $this->shareManager->getSharesBy(
 				$this->userId,
 				$requestedShareType,
 				$node,
 				false,
 				-1
-			));
+			);
 
 			// Also check for shares where the user is the recipient
 			try {
-				$result = array_merge($result, $this->shareManager->getSharedWith(
+				$result[] = $this->shareManager->getSharedWith(
 					$this->userId,
 					$requestedShareType,
 					$node,
 					-1
-				));
+				);
 			} catch (BackendError $e) {
 				// ignore
 			}
 		}
 
-		return $result;
+		return array_merge(...$result);
 	}
 
 	/**
@@ -141,7 +150,7 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 
 		// if we already cached the folder containing this file
 		// then we already know there are no shares here.
-		if (array_search($parentPath, $this->cachedFolders) === false) {
+		if (!isset($this->cachedFolders[$parentPath])) {
 			try {
 				$node = $sabreNode->getNode();
 			} catch (NotFoundException $e) {
@@ -154,6 +163,27 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 		}
 
 		return [];
+	}
+
+	private function preloadCollection(PropFind $propFind, ICollection $collection): void {
+		if (!$collection instanceof Directory
+			|| isset($this->cachedFolders[$collection->getPath()])
+			|| (
+				$propFind->getStatus(self::SHARETYPES_PROPERTYNAME) === null
+				&& $propFind->getStatus(self::SHAREES_PROPERTYNAME) === null
+			)
+		) {
+			return;
+		}
+
+		// If the node is a directory and we are requesting share types or sharees
+		// then we get all the shares in the folder and cache them.
+		// This is more performant than iterating each files afterwards.
+		$folderNode = $collection->getNode();
+		$this->cachedFolders[$collection->getPath()] = true;
+		foreach ($this->getSharesFolder($folderNode) as $id => $shares) {
+			$this->cachedShares[$id] = $shares;
+		}
 	}
 
 	/**
@@ -170,30 +200,9 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 			return;
 		}
 
-		// If the node is a directory and we are requesting share types or sharees
-		// then we get all the shares in the folder and cache them.
-		// This is more performant than iterating each files afterwards.
-		if ($sabreNode instanceof Directory
-			&& $propFind->getDepth() !== 0
-			&& (
-				!is_null($propFind->getStatus(self::SHARETYPES_PROPERTYNAME))
-				|| !is_null($propFind->getStatus(self::SHAREES_PROPERTYNAME))
-			)
-		) {
-			$folderNode = $sabreNode->getNode();
-			$this->cachedFolders[] = $sabreNode->getPath();
-			$childShares = $this->getSharesFolder($folderNode);
-			foreach ($childShares as $id => $shares) {
-				$this->cachedShares[$id] = $shares;
-			}
-		}
-
 		$propFind->handle(self::SHARETYPES_PROPERTYNAME, function () use ($sabreNode): ShareTypeList {
 			$shares = $this->getShares($sabreNode);
-
-			$shareTypes = array_unique(array_map(function (IShare $share) {
-				return $share->getShareType();
-			}, $shares));
+			$shareTypes = array_unique(array_map(static fn (IShare $share): int => $share->getShareType(), $shares));
 
 			return new ShareTypeList($shareTypes);
 		});
@@ -203,5 +212,58 @@ class SharesPlugin extends \Sabre\DAV\ServerPlugin {
 
 			return new ShareeList($shares);
 		});
+	}
+
+	/**
+	 * Ensure that when copying or moving a node it is not transferred from one share to another,
+	 * if the user is neither the owner nor has re-share permissions.
+	 * For share creation we already ensure this in the share manager.
+	 */
+	public function validateMoveOrCopy(string $source, string $target): bool {
+		try {
+			$targetNode = $this->tree->getNodeForPath($target);
+		} catch (NotFound) {
+			[$targetPath,] = \Sabre\Uri\split($target);
+			$targetNode = $this->tree->getNodeForPath($targetPath);
+		}
+
+		$sourceNode = $this->tree->getNodeForPath($source);
+		if ((!$sourceNode instanceof DavNode) || (!$targetNode instanceof DavNode)) {
+			return true;
+		}
+
+		$sourceNode = $sourceNode->getNode();
+		if ($sourceNode->isShareable()) {
+			return true;
+		}
+
+		$targetShares = $this->getShare($targetNode->getNode());
+		if (empty($targetShares)) {
+			// Target is not a share so no re-sharing inprogress
+			return true;
+		}
+
+		$sourceStorage = $sourceNode->getStorage();
+		if ($sourceStorage->instanceOfStorage(ISharedStorage::class)) {
+			// source is also a share - check if it is the same share
+
+			/** @var ISharedStorage $sourceStorage */
+			$sourceShare = $sourceStorage->getShare();
+			foreach ($targetShares as $targetShare) {
+				if ($targetShare->getId() === $sourceShare->getId()) {
+					return true;
+				}
+			}
+
+			// if the share recipient is allow to delete from the share, they are allowed to move the file out of the share
+			// the user moving the file out of the share to their home storage would give them share permissions and allow moving into the share
+			//
+			// since the 2-step move is allowed, we also allow both steps at once
+			if ($sourceNode->isDeletable()) {
+				return true;
+			}
+		}
+
+		throw new Forbidden('You cannot move a non-shareable node into a share');
 	}
 }

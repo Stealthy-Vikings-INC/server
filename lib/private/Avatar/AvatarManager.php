@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OC\Avatar;
 
 use OC\KnownUser\KnownUserService;
@@ -50,6 +51,7 @@ class AvatarManager implements IAvatarManager {
 	 * @throws \Exception In case the username is potentially dangerous
 	 * @throws NotFoundException In case there is no user folder yet
 	 */
+	#[\Override]
 	public function getAvatar(string $userId): IAvatar {
 		$user = $this->userManager->get($userId);
 		if ($user === null) {
@@ -92,10 +94,10 @@ class AvatarManager implements IAvatarManager {
 				return new UserAvatar($folder, $this->l, $user, $this->logger, $this->config);
 			default:
 				// use a placeholder avatar which caches the generated images
-				return new PlaceholderAvatar($folder, $user, $this->logger);
+				return new PlaceholderAvatar($folder, $user, $this->config, $this->logger);
 		}
 
-		return new PlaceholderAvatar($folder, $user, $this->logger);
+		return new PlaceholderAvatar($folder, $user, $this->config, $this->logger);
 	}
 
 	/**
@@ -128,7 +130,8 @@ class AvatarManager implements IAvatarManager {
 	 *
 	 * @param string $name The guest name, e.g. "Albert".
 	 */
+	#[\Override]
 	public function getGuestAvatar(string $name): IAvatar {
-		return new GuestAvatar($name, $this->logger);
+		return new GuestAvatar($name, $this->config, $this->logger);
 	}
 }

@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OCA\Files_External\Tests\Storage;
 
 use OCA\Files_External\Lib\Storage\FTP;
@@ -13,21 +14,19 @@ use OCA\Files_External\Lib\Storage\FTP;
 /**
  * Class FtpTest
  *
- * @group DB
  *
  * @package OCA\Files_External\Tests\Storage
  */
+#[\PHPUnit\Framework\Attributes\Group(name: 'DB')]
 class FtpTest extends \Test\Files\Storage\Storage {
-	private $config;
+	use ConfigurableStorageTrait;
 
 	protected function setUp(): void {
 		parent::setUp();
 
 		$id = $this->getUniqueID();
-		$this->config = include('files_external/tests/config.ftp.php');
-		if (! is_array($this->config) or ! $this->config['run']) {
-			$this->markTestSkipped('FTP backend not configured');
-		}
+		$this->loadConfig(__DIR__ . '/../config.ftp.php');
+
 		$rootInstance = new FTP($this->config);
 		$rootInstance->mkdir($id);
 
@@ -52,7 +51,6 @@ class FtpTest extends \Test\Files\Storage\Storage {
 			return substr($item[0], -1) !== ' ';
 		});
 	}
-
 
 	/**
 	 * mtime for folders is only with a minute resolution

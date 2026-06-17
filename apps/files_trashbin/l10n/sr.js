@@ -12,7 +12,6 @@ OC.L10N.register(
     "Confirm permanent deletion" : "Потврдите трајно брисање",
     "Are you sure you want to permanently delete all files and folders in the trash? This cannot be undone." : "Да ли сте сигурни да желите трајно да обришете све фајлове и фолдере у корпи за отпад? Ово не може да се поништи.",
     "Cancel" : "Откажи",
-    "Deletion cancelled" : "Брисање је отказано",
     "Original location" : "Оригинална локација",
     "Deleted by" : "Обрисао је",
     "Deleted" : "Обрисано",

@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2020 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\DAV\Tests\unit\Search;
 
 use OCA\DAV\CalDAV\CalDavBackend;
@@ -18,6 +19,7 @@ use OCP\Search\IFilter;
 use OCP\Search\ISearchQuery;
 use OCP\Search\SearchResult;
 use OCP\Search\SearchResultEntry;
+use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\MockObject\MockObject;
 use Sabre\VObject\Reader;
 use Test\TestCase;
@@ -399,7 +401,19 @@ class EventsSearchProviderTest extends TestCase {
 		$this->assertFalse($result2Data['rounded']);
 	}
 
-	public function testGetDeepLinkToCalendarApp(): void {
+	public static function provideDeepLinkData(): array {
+		return [
+			['principals/users/john.doe', 'bGluay10by1yZW1vdGUucGhwL2Rhdi9jYWxlbmRhcnMvam9obi5kb2UvZm9vL2Jhci5pY3M='],
+			['principals/users/John Doe', 'bGluay10by1yZW1vdGUucGhwL2Rhdi9jYWxlbmRhcnMvSm9obiUyMERvZS9mb28vYmFyLmljcw=='],
+			['principals/users/john@doe', 'bGluay10by1yZW1vdGUucGhwL2Rhdi9jYWxlbmRhcnMvam9obkBkb2UvZm9vL2Jhci5pY3M='],
+		];
+	}
+
+	#[DataProvider(methodName: 'provideDeepLinkData')]
+	public function testGetDeepLinkToCalendarApp(
+		string $principalUri,
+		string $expectedBase64DavUrl,
+	): void {
 		$this->urlGenerator->expects($this->once())
 			->method('linkTo')
 			->with('', 'remote.php')
@@ -410,16 +424,20 @@ class EventsSearchProviderTest extends TestCase {
 			->willReturn('link-to-route-calendar/');
 		$this->urlGenerator->expects($this->once())
 			->method('getAbsoluteURL')
-			->with('link-to-route-calendar/edit/bGluay10by1yZW1vdGUucGhwL2Rhdi9jYWxlbmRhcnMvam9obi5kb2UvZm9vL2Jhci5pY3M=')
+			->with("link-to-route-calendar/edit/$expectedBase64DavUrl")
 			->willReturn('absolute-url-to-route');
 
-		$actual = self::invokePrivate($this->provider, 'getDeepLinkToCalendarApp', ['principals/users/john.doe', 'foo', 'bar.ics']);
+		$actual = self::invokePrivate($this->provider, 'getDeepLinkToCalendarApp', [
+			$principalUri,
+			'foo',
+			'bar.ics',
+		]);
 
 		$this->assertEquals('absolute-url-to-route', $actual);
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('generateSublineDataProvider')]
-	public function testGenerateSubline(string $ics, string $expectedSubline): void {
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'generateSublineDataProvider')]
+	public function testGenerateSubline(string $ics, string $expectedSubline, array $calendarInfo = []): void {
 		$vCalendar = Reader::read($ics, Reader::OPTION_FORGIVING);
 		$eventComponent = $vCalendar->VEVENT;
 
@@ -432,19 +450,23 @@ class EventsSearchProviderTest extends TestCase {
 				return $date->format('m-d');
 			});
 
-		$actual = self::invokePrivate($this->provider, 'generateSubline', [$eventComponent]);
+		$actual = self::invokePrivate($this->provider, 'generateSubline', [$eventComponent, $calendarInfo]);
 		$this->assertEquals($expectedSubline, $actual);
 	}
 
 	public static function generateSublineDataProvider(): array {
 		return [
-			[self::$vEvent1, '08-16 09:00 - 10:00'],
-			[self::$vEvent2, '08-16 09:00 - 08-17 10:00'],
-			[self::$vEvent3, '10-05'],
-			[self::$vEvent4, '10-05 - 10-07'],
-			[self::$vEvent5, '10-05 - 10-09'],
-			[self::$vEvent6, '10-05'],
-			[self::$vEvent7, '08-16 09:00 - 09:00'],
+			[self::$vEvent1, '08-16 09:00 - 10:00', []],
+			[self::$vEvent2, '08-16 09:00 - 08-17 10:00', []],
+			[self::$vEvent3, '10-05', []],
+			[self::$vEvent4, '10-05 - 10-07', []],
+			[self::$vEvent5, '10-05 - 10-09', []],
+			[self::$vEvent6, '10-05', []],
+			[self::$vEvent7, '08-16 09:00 - 09:00', []],
+			[self::$vEvent1, '08-16 09:00 - 10:00 (My Calendar)', ['{DAV:}displayname' => 'My Calendar']],
+			[self::$vEvent3, '10-05 (My Calendar)', ['{DAV:}displayname' => 'My Calendar']],
+			[self::$vEvent2, '08-16 09:00 - 08-17 10:00 (My Calendar)', ['{DAV:}displayname' => 'My Calendar']],
+			[self::$vEvent1, '08-16 09:00 - 10:00', ['{DAV:}displayname' => '']],
 		];
 	}
 }

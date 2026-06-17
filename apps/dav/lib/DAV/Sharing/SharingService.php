@@ -5,6 +5,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\DAV\DAV\Sharing;
 
 abstract class SharingService {
@@ -49,5 +50,12 @@ abstract class SharingService {
 
 	public function getSharesForIds(array $resourceIds): array {
 		return $this->mapper->getSharesForIds($resourceIds, $this->getResourceType());
+	}
+
+	/**
+	 * @param string[] $principals
+	 */
+	public function getSharesByPrincipals(array $principals): array {
+		return $this->mapper->getSharesByPrincipals($principals, $this->getResourceType());
 	}
 }

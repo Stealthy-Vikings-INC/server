@@ -44,12 +44,12 @@ p($theme->getTitle());
 			<div class="v-align">
 				<?php if ($_['bodyid'] === 'body-login'): ?>
 					<header>
-						<div id="header">
+						<div id="header" class="header-guest">
 							<div class="logo"></div>
 						</div>
 					</header>
 				<?php endif; ?>
-				<div>
+				<div class="guest-content">
 					<h1 class="hidden-visually">
 						<?php p($theme->getName()); ?>
 					</h1>

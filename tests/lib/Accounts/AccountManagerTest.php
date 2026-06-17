@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -37,9 +39,9 @@ use Test\TestCase;
 /**
  * Class AccountManagerTest
  *
- * @group DB
  * @package Test\Accounts
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class AccountManagerTest extends TestCase {
 
 	/** accounts table name */
@@ -60,6 +62,7 @@ class AccountManagerTest extends TestCase {
 	private LoggerInterface&MockObject $logger;
 	private IClientService&MockObject $clientService;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->connection = Server::get(IDBConnection::class);
@@ -94,6 +97,7 @@ class AccountManagerTest extends TestCase {
 		);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		parent::tearDown();
 		$query = $this->connection->getQueryBuilder();
@@ -569,6 +573,13 @@ class AccountManagerTest extends TestCase {
 
 			[
 				'name' => IAccountManager::PROPERTY_TWITTER,
+				'value' => '',
+				'scope' => IAccountManager::SCOPE_LOCAL,
+				'verified' => IAccountManager::NOT_VERIFIED,
+			],
+
+			[
+				'name' => IAccountManager::PROPERTY_BLUESKY,
 				'value' => '',
 				'scope' => IAccountManager::SCOPE_LOCAL,
 				'verified' => IAccountManager::NOT_VERIFIED,

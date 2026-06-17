@@ -9,6 +9,7 @@
 namespace Test;
 
 use OC\App\AppManager;
+use OC\App\DependencyAnalyzer;
 use OC\AppConfig;
 use OC\Config\ConfigManager;
 use OCP\EventDispatcher\IEventDispatcher;
@@ -16,19 +17,19 @@ use OCP\IAppConfig;
 use OCP\ICacheFactory;
 use OCP\IConfig;
 use OCP\IDBConnection;
+use OCP\IGroup;
 use OCP\IGroupManager;
+use OCP\IUser;
 use OCP\IUserManager;
 use OCP\IUserSession;
 use OCP\Server;
 use OCP\ServerVersion;
-use PHPUnit\Framework\MockObject\MockObject;
 use Psr\Log\LoggerInterface;
 
 /**
  * Class AppTest
- *
- * @group DB
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class AppTest extends \Test\TestCase {
 	public const TEST_USER1 = 'user1';
 	public const TEST_USER2 = 'user2';
@@ -36,286 +37,36 @@ class AppTest extends \Test\TestCase {
 	public const TEST_GROUP1 = 'group1';
 	public const TEST_GROUP2 = 'group2';
 
-	public static function appVersionsProvider(): array {
-		return [
-			// exact match
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '6.0',
-					'requiremax' => '6.0',
-				],
-				true
-			],
-			// in-between match
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '7.0',
-				],
-				true
-			],
-			// app too old
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '5.0',
-				],
-				false
-			],
-			// app too new
-			[
-				'5.0.0.0',
-				[
-					'requiremin' => '6.0',
-					'requiremax' => '6.0',
-				],
-				false
-			],
-			// only min specified
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '6.0',
-				],
-				true
-			],
-			// only min specified fail
-			[
-				'5.0.0.0',
-				[
-					'requiremin' => '6.0',
-				],
-				false
-			],
-			// only min specified legacy
-			[
-				'6.0.0.0',
-				[
-					'require' => '6.0',
-				],
-				true
-			],
-			// only min specified legacy fail
-			[
-				'4.0.0.0',
-				[
-					'require' => '6.0',
-				],
-				false
-			],
-			// only max specified
-			[
-				'5.0.0.0',
-				[
-					'requiremax' => '6.0',
-				],
-				true
-			],
-			// only max specified fail
-			[
-				'7.0.0.0',
-				[
-					'requiremax' => '6.0',
-				],
-				false
-			],
-			// variations of versions
-			// single OC number
-			[
-				'4',
-				[
-					'require' => '4.0',
-				],
-				true
-			],
-			// multiple OC number
-			[
-				'4.3.1',
-				[
-					'require' => '4.3',
-				],
-				true
-			],
-			// single app number
-			[
-				'4',
-				[
-					'require' => '4',
-				],
-				true
-			],
-			// single app number fail
-			[
-				'4.3',
-				[
-					'require' => '5',
-				],
-				false
-			],
-			// complex
-			[
-				'5.0.0',
-				[
-					'require' => '4.5.1',
-				],
-				true
-			],
-			// complex fail
-			[
-				'4.3.1',
-				[
-					'require' => '4.3.2',
-				],
-				false
-			],
-			// two numbers
-			[
-				'4.3.1',
-				[
-					'require' => '4.4',
-				],
-				false
-			],
-			// one number fail
-			[
-				'4.3.1',
-				[
-					'require' => '5',
-				],
-				false
-			],
-			// pre-alpha app
-			[
-				'5.0.3',
-				[
-					'require' => '4.93',
-				],
-				true
-			],
-			// pre-alpha OC
-			[
-				'6.90.0.2',
-				[
-					'require' => '6.90',
-				],
-				true
-			],
-			// pre-alpha OC max
-			[
-				'6.90.0.2',
-				[
-					'requiremax' => '7',
-				],
-				true
-			],
-			// expect same major number match
-			[
-				'5.0.3',
-				[
-					'require' => '5',
-				],
-				true
-			],
-			// expect same major number match
-			[
-				'5.0.3',
-				[
-					'requiremax' => '5',
-				],
-				true
-			],
-			// dependencies versions before require*
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '7.0',
-					'dependencies' => [
-						'owncloud' => [
-							'@attributes' => [
-								'min-version' => '7.0',
-								'max-version' => '7.0',
-							],
-						],
-					],
-				],
-				false
-			],
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '7.0',
-					'dependencies' => [
-						'owncloud' => [
-							'@attributes' => [
-								'min-version' => '5.0',
-								'max-version' => '5.0',
-							],
-						],
-					],
-				],
-				false
-			],
-			[
-				'6.0.0.0',
-				[
-					'requiremin' => '5.0',
-					'requiremax' => '5.0',
-					'dependencies' => [
-						'owncloud' => [
-							'@attributes' => [
-								'min-version' => '5.0',
-								'max-version' => '7.0',
-							],
-						],
-					],
-				],
-				true
-			],
-			[
-				'9.2.0.0',
-				[
-					'dependencies' => [
-						'owncloud' => [
-							'@attributes' => [
-								'min-version' => '9.0',
-								'max-version' => '9.1',
-							],
-						],
-						'nextcloud' => [
-							'@attributes' => [
-								'min-version' => '9.1',
-								'max-version' => '9.2',
-							],
-						],
-					],
-				],
-				true
-			],
-			[
-				'9.2.0.0',
-				[
-					'dependencies' => [
-						'nextcloud' => [
-							'@attributes' => [
-								'min-version' => '9.1',
-								'max-version' => '9.2',
-							],
-						],
-					],
-				],
-				true
-			],
-		];
+	private static IUser $user1;
+	private static IUser $user2;
+	private static IUser $user3;
+
+	private static IGroup $group1;
+	private static IGroup $group2;
+
+	public static function setUpBeforeClass(): void {
+		$userManager = Server::get(IUserManager::class);
+		$groupManager = Server::get(IGroupManager::class);
+
+		self::$user1 = $userManager->createUser(self::TEST_USER1, 'NotAnEasyPassword123456+');
+		self::$user2 = $userManager->createUser(self::TEST_USER2, 'NotAnEasyPassword123456_');
+		self::$user3 = $userManager->createUser(self::TEST_USER3, 'NotAnEasyPassword123456?');
+
+		self::$group1 = $groupManager->createGroup(self::TEST_GROUP1);
+		self::$group1->addUser(self::$user1);
+		self::$group1->addUser(self::$user3);
+		self::$group2 = $groupManager->createGroup(self::TEST_GROUP2);
+		self::$group2->addUser(self::$user2);
+		self::$group2->addUser(self::$user3);
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('appVersionsProvider')]
-	public function testIsAppCompatible($ocVersion, $appInfo, $expectedResult): void {
-		$this->assertEquals($expectedResult, \OC_App::isAppCompatible($ocVersion, $appInfo));
+	public static function tearDownAfterClass(): void {
+		self::$user1->delete();
+		self::$user2->delete();
+		self::$user3->delete();
+
+		self::$group1->delete();
+		self::$group2->delete();
 	}
 
 	/**
@@ -346,6 +97,7 @@ class AppTest extends \Test\TestCase {
 					'app3',
 					'appforgroup1',
 					'appforgroup12',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -370,6 +122,7 @@ class AppTest extends \Test\TestCase {
 					'app3',
 					'appforgroup12',
 					'appforgroup2',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -395,6 +148,7 @@ class AppTest extends \Test\TestCase {
 					'appforgroup1',
 					'appforgroup12',
 					'appforgroup2',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -420,6 +174,7 @@ class AppTest extends \Test\TestCase {
 					'appforgroup1',
 					'appforgroup12',
 					'appforgroup2',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -445,6 +200,7 @@ class AppTest extends \Test\TestCase {
 					'appforgroup1',
 					'appforgroup12',
 					'appforgroup2',
+					'appstore',
 					'cloud_federation_api',
 					'dav',
 					'federatedfilesharing',
@@ -467,21 +223,17 @@ class AppTest extends \Test\TestCase {
 	 * Test enabled apps
 	 */
 	#[\PHPUnit\Framework\Attributes\DataProvider('appConfigValuesProvider')]
-	public function testEnabledApps($user, $expectedApps, $forceAll): void {
-		$userManager = Server::get(IUserManager::class);
-		$groupManager = Server::get(IGroupManager::class);
-		$user1 = $userManager->createUser(self::TEST_USER1, 'NotAnEasyPassword123456+');
-		$user2 = $userManager->createUser(self::TEST_USER2, 'NotAnEasyPassword123456_');
-		$user3 = $userManager->createUser(self::TEST_USER3, 'NotAnEasyPassword123456?');
+	public function testEnabledApps($userId, $expectedApps, $forceAll): void {
+		$userSession = Server::get(IUserSession::class);
 
-		$group1 = $groupManager->createGroup(self::TEST_GROUP1);
-		$group1->addUser($user1);
-		$group1->addUser($user3);
-		$group2 = $groupManager->createGroup(self::TEST_GROUP2);
-		$group2->addUser($user2);
-		$group2->addUser($user3);
+		$user = match ($userId) {
+			self::TEST_USER1 => self::$user1,
+			self::TEST_USER2 => self::$user2,
+			self::TEST_USER3 => self::$user3,
+			default => null,
+		};
 
-		\OC_User::setUserId($user);
+		$userSession->setUser($user);
 
 		$this->setupAppConfigMock()->expects($this->once())
 			->method('searchValues')
@@ -499,14 +251,7 @@ class AppTest extends \Test\TestCase {
 		$apps = \OC_App::getEnabledApps(false, $forceAll);
 
 		$this->restoreAppConfig();
-		\OC_User::setUserId(null);
-
-		$user1->delete();
-		$user2->delete();
-		$user3->delete();
-
-		$group1->delete();
-		$group2->delete();
+		$userSession->setUser(null);
 
 		$this->assertEquals($expectedApps, $apps);
 	}
@@ -516,10 +261,8 @@ class AppTest extends \Test\TestCase {
 	 * enabled apps more than once when a user is set.
 	 */
 	public function testEnabledAppsCache(): void {
-		$userManager = Server::get(IUserManager::class);
-		$user1 = $userManager->createUser(self::TEST_USER1, 'NotAnEasyPassword123456+');
-
-		\OC_User::setUserId(self::TEST_USER1);
+		$userSession = Server::get(IUserSession::class);
+		$userSession->setUser(self::$user1);
 
 		$this->setupAppConfigMock()->expects($this->once())
 			->method('searchValues')
@@ -531,21 +274,17 @@ class AppTest extends \Test\TestCase {
 			);
 
 		$apps = \OC_App::getEnabledApps();
-		$this->assertEquals(['files', 'app3', 'cloud_federation_api', 'dav', 'federatedfilesharing', 'lookup_server_connector', 'oauth2', 'profile', 'provisioning_api', 'settings', 'theming', 'twofactor_backupcodes', 'viewer', 'workflowengine'], $apps);
+		$this->assertEquals(['files', 'app3', 'appstore', 'cloud_federation_api', 'dav', 'federatedfilesharing', 'lookup_server_connector', 'oauth2', 'profile', 'provisioning_api', 'settings', 'theming', 'twofactor_backupcodes', 'viewer', 'workflowengine'], $apps);
 
 		// mock should not be called again here
 		$apps = \OC_App::getEnabledApps();
-		$this->assertEquals(['files', 'app3', 'cloud_federation_api', 'dav', 'federatedfilesharing', 'lookup_server_connector', 'oauth2', 'profile', 'provisioning_api', 'settings', 'theming', 'twofactor_backupcodes', 'viewer', 'workflowengine'], $apps);
+		$this->assertEquals(['files', 'app3', 'appstore', 'cloud_federation_api', 'dav', 'federatedfilesharing', 'lookup_server_connector', 'oauth2', 'profile', 'provisioning_api', 'settings', 'theming', 'twofactor_backupcodes', 'viewer', 'workflowengine'], $apps);
 
 		$this->restoreAppConfig();
-		\OC_User::setUserId(null);
-
-		$user1->delete();
+		$userSession->setUser(null);
 	}
 
-
 	private function setupAppConfigMock() {
-		/** @var AppConfig|MockObject */
 		$appConfig = $this->getMockBuilder(AppConfig::class)
 			->onlyMethods(['searchValues'])
 			->setConstructorArgs([Server::get(IDBConnection::class)])
@@ -572,6 +311,7 @@ class AppTest extends \Test\TestCase {
 			Server::get(LoggerInterface::class),
 			Server::get(ServerVersion::class),
 			Server::get(ConfigManager::class),
+			Server::get(DependencyAnalyzer::class),
 		));
 	}
 

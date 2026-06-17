@@ -10,7 +10,6 @@ OC.L10N.register(
     "Confirm permanent deletion" : "Пацвердзіце выдаленне назаўжды",
     "Are you sure you want to permanently delete all files and folders in the trash? This cannot be undone." : "Вы ўпэўнены, што хочаце назаўжды выдаліць усе файлы і папкі ў сметніцы? Гэта дзеянне нельга адрабіць.",
     "Cancel" : "Скасаваць",
-    "Deletion cancelled" : "Выдаленне скасавана",
     "Original location" : "Зыходнае размяшчэнне",
     "Deleted by" : "Выдалены карыстальнікам ",
     "Deleted" : "Выдалены",

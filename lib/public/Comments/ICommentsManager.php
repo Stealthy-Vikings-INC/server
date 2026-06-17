@@ -5,6 +5,7 @@
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OCP\Comments;
 
 use OCP\IUser;
@@ -181,10 +182,21 @@ interface ICommentsManager {
 	 * @param \DateTime|null $notOlderThan optional, timestamp of the oldest comments
 	 *                                     that may be returned
 	 * @param string $verb Limit the verb of the comment - Added in 14.0.0
-	 * @return Int
+	 * @return int
 	 * @since 9.0.0
 	 */
 	public function getNumberOfCommentsForObject($objectType, $objectId, ?\DateTime $notOlderThan = null, $verb = '');
+
+	/**
+	 * @param $objectType string the object type, e.g. 'files'
+	 * @param $objectIds string[] the ids of the object
+	 * @param \DateTime|null $notOlderThan optional, timestamp of the oldest comments
+	 *                                     that may be returned
+	 * @param string $verb Limit the verb of the comment
+	 * @return array<string, int>
+	 * @since 32.0.0
+	 */
+	public function getNumberOfCommentsForObjects(string $objectType, array $objectIds, ?\DateTime $notOlderThan = null, string $verb = ''): array;
 
 	/**
 	 * @param string $objectType the object type, e.g. 'files'
@@ -207,7 +219,6 @@ interface ICommentsManager {
 	 * @deprecated 24.0.0 - Use getNumberOfCommentsWithVerbsForObjectSinceComment instead
 	 */
 	public function getNumberOfCommentsForObjectSinceComment(string $objectType, string $objectId, int $lastRead, string $verb = ''): int;
-
 
 	/**
 	 * @param string $objectType
@@ -355,7 +366,7 @@ interface ICommentsManager {
 	public function save(IComment $comment);
 
 	/**
-	 * removes references to specific actor (e.g. on user delete) of a comment.
+	 * Deletes all references to specific actor (e.g. on user delete) of a comment.
 	 * The comment itself must not get lost/deleted.
 	 *
 	 * A 'users' type actor (type and id) should get replaced by the
@@ -363,17 +374,17 @@ interface ICommentsManager {
 	 *
 	 * @param string $actorType the actor type (e.g. 'users')
 	 * @param string $actorId a user id
-	 * @return boolean
+	 * @return boolean whether the deletion was successful
 	 * @since 9.0.0
 	 */
 	public function deleteReferencesOfActor($actorType, $actorId);
 
 	/**
-	 * deletes all comments made of a specific object (e.g. on file delete)
+	 * Deletes all comments made of a specific object (e.g. on file delete).
 	 *
 	 * @param string $objectType the object type (e.g. 'files')
 	 * @param string $objectId e.g. the file id
-	 * @return boolean
+	 * @return boolean whether the deletion was successful
 	 * @since 9.0.0
 	 */
 	public function deleteCommentsAtObject($objectType, $objectId);
@@ -427,6 +438,7 @@ interface ICommentsManager {
 	 * to consumers of the comments infrastructure
 	 *
 	 * @param \Closure $closure
+	 * @return void
 	 * @since 11.0.0
 	 */
 	public function registerEventHandler(\Closure $closure);
@@ -436,6 +448,7 @@ interface ICommentsManager {
 	 *
 	 * @param string $type
 	 * @param \Closure $closure
+	 * @return void
 	 * @throws \OutOfBoundsException
 	 * @since 11.0.0
 	 *

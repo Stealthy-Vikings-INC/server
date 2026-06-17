@@ -97,8 +97,14 @@ interface IAccountManager {
 
 	/**
 	 * @since 15.0.0
+	 * @deprecated 32.0.0
 	 */
 	public const PROPERTY_TWITTER = 'twitter';
+
+	/**
+	 * @since 32.0.0
+	 */
+	public const PROPERTY_BLUESKY = 'bluesky';
 
 	/**
 	 * @since 26.0.0
@@ -160,9 +166,9 @@ interface IAccountManager {
 		self::PROPERTY_PRONOUNS,
 		self::PROPERTY_ROLE,
 		self::PROPERTY_TWITTER,
+		self::PROPERTY_BLUESKY,
 		self::PROPERTY_WEBSITE,
 	];
-
 
 	/**
 	 * @since 22.0.0

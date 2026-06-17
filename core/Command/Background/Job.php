@@ -25,6 +25,7 @@ class Job extends Command {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		$this
 			->setName('background-job:execute')
@@ -43,8 +44,9 @@ class Job extends Command {
 		;
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
-		$jobId = (int)$input->getArgument('job-id');
+		$jobId = (string)$input->getArgument('job-id');
 
 		$job = $this->jobList->getById($jobId);
 		if ($job === null) {
@@ -69,8 +71,7 @@ class Job extends Command {
 			$output->writeln('<error>Something went wrong when trying to retrieve Job with ID ' . $jobId . ' from database</error>');
 			return 1;
 		}
-		/** @psalm-suppress DeprecatedMethod Calling execute until it is removed, then will switch to start */
-		$job->execute($this->jobList);
+		$job->start($this->jobList);
 		$job = $this->jobList->getById($jobId);
 
 		if (($job === null) || ($lastRun !== $job->getLastRun())) {
@@ -88,7 +89,7 @@ class Job extends Command {
 		return 0;
 	}
 
-	protected function printJobInfo(int $jobId, IJob $job, OutputInterface $output): void {
+	protected function printJobInfo(string $jobId, IJob $job, OutputInterface $output): void {
 		$row = $this->jobList->getDetailsById($jobId);
 
 		$lastRun = new \DateTime();
@@ -123,7 +124,6 @@ class Job extends Command {
 		if ($isTimedJob) {
 			$reflection = new \ReflectionClass($job);
 			$intervalProperty = $reflection->getProperty('interval');
-			$intervalProperty->setAccessible(true);
 			$interval = $intervalProperty->getValue($job);
 
 			$nextRun = new \DateTime();

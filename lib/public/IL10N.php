@@ -50,7 +50,7 @@ interface IL10N {
 	/**
 	 * Localization
 	 * @param string $type Type of localization
-	 * @param \DateTime|int|string $data parameters for this localization
+	 * @param \DateTime|int|string|null $data parameters for this localization
 	 * @param array $options currently supports following options:
 	 *                       - 'width': handed into \Punic\Calendar::formatDate as second parameter
 	 * @return string|int|false
@@ -73,7 +73,6 @@ interface IL10N {
 	 * @since 6.0.0 - parameter $options was added in 8.0.0
 	 */
 	public function l(string $type, $data, array $options = []);
-
 
 	/**
 	 * The code (en, de, ...) of the language that is used for this IL10N object

@@ -5,15 +5,16 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace Tests\lib\Config;
 
 use OC\AppConfig;
 use OC\AppFramework\Bootstrap\Coordinator;
 use OC\Config\ConfigManager;
+use OCP\App\IAppManager;
 use OCP\Config\Exceptions\TypeConflictException;
 use OCP\Config\Exceptions\UnknownKeyException;
 use OCP\Config\IUserConfig;
-use OCP\Config\Lexicon\Preset;
 use OCP\Exceptions\AppConfigTypeConflictException;
 use OCP\Exceptions\AppConfigUnknownKeyException;
 use OCP\IAppConfig;
@@ -23,16 +24,18 @@ use Test\TestCase;
 /**
  * Class UserPreferencesTest
  *
- * @group DB
  *
  * @package Test
  */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class LexiconTest extends TestCase {
 	/** @var AppConfig */
 	private IAppConfig $appConfig;
 	private IUserConfig $userConfig;
 	private ConfigManager $configManager;
+	private IAppManager $appManager;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -45,8 +48,10 @@ class LexiconTest extends TestCase {
 		$this->appConfig = Server::get(IAppConfig::class);
 		$this->userConfig = Server::get(IUserConfig::class);
 		$this->configManager = Server::get(ConfigManager::class);
+		$this->appManager = Server::get(IAppManager::class);
 	}
 
+	#[\Override]
 	protected function tearDown(): void {
 		parent::tearDown();
 
@@ -54,11 +59,15 @@ class LexiconTest extends TestCase {
 		$this->appConfig->deleteApp(TestLexicon_N::APPID);
 		$this->appConfig->deleteApp(TestLexicon_W::APPID);
 		$this->appConfig->deleteApp(TestLexicon_E::APPID);
+		$this->appConfig->deleteApp(TestLexicon_UserIndexed::APPID);
+		$this->appConfig->deleteApp(TestLexicon_UserIndexedRemove::APPID);
 
 		$this->userConfig->deleteApp(TestConfigLexicon_I::APPID);
 		$this->userConfig->deleteApp(TestLexicon_N::APPID);
 		$this->userConfig->deleteApp(TestLexicon_W::APPID);
 		$this->userConfig->deleteApp(TestLexicon_E::APPID);
+		$this->userConfig->deleteApp(TestLexicon_UserIndexed::APPID);
+		$this->userConfig->deleteApp(TestLexicon_UserIndexedRemove::APPID);
 	}
 
 	public function testAppLexiconSetCorrect() {
@@ -205,27 +214,49 @@ class LexiconTest extends TestCase {
 		$this->assertSame(false, $this->appConfig->getValueBool(TestConfigLexicon_I::APPID, 'key4'));
 	}
 
-	public function testAppConfigLexiconPreset() {
-		$this->configManager->setLexiconPreset(Preset::FAMILY);
-		$this->assertSame('family', $this->appConfig->getValueString(TestLexicon_E::APPID, 'key3'));
+	public function testLexiconIndexedUpdate() {
+		$this->userConfig->setValueString('user1', TestLexicon_UserIndexed::APPID, 'key1', 'abcd');
+		$this->userConfig->setValueString('user2', TestLexicon_UserIndexed::APPID, 'key1', '1234', flags: 64);
+		$this->userConfig->setValueString('user3', TestLexicon_UserIndexed::APPID, 'key1', 'qwer', flags: IUserConfig::FLAG_INDEXED);
+		$this->userConfig->setValueString('user4', TestLexicon_UserIndexed::APPID, 'key1', 'uiop', flags: 64 | IUserConfig::FLAG_INDEXED);
+
+		$bootstrapCoordinator = Server::get(Coordinator::class);
+		$bootstrapCoordinator->getRegistrationContext()?->registerConfigLexicon(TestLexicon_UserIndexed::APPID, TestLexicon_UserIndexed::class);
+		$this->userConfig->clearCacheAll();
+
+		$this->configManager->updateLexiconEntries(TestLexicon_UserIndexed::APPID);
+
+		$this->assertTrue($this->userConfig->isIndexed('user1', TestLexicon_UserIndexed::APPID, 'key1'));
+		$this->assertTrue($this->userConfig->isIndexed('user2', TestLexicon_UserIndexed::APPID, 'key1'));
+		$this->assertTrue($this->userConfig->isIndexed('user3', TestLexicon_UserIndexed::APPID, 'key1'));
+		$this->assertTrue($this->userConfig->isIndexed('user4', TestLexicon_UserIndexed::APPID, 'key1'));
+
+		$this->assertSame(2, $this->userConfig->getValueFlags('user1', TestLexicon_UserIndexed::APPID, 'key1'));
+		$this->assertSame(66, $this->userConfig->getValueFlags('user2', TestLexicon_UserIndexed::APPID, 'key1'));
+		$this->assertSame(2, $this->userConfig->getValueFlags('user3', TestLexicon_UserIndexed::APPID, 'key1'));
+		$this->assertSame(66, $this->userConfig->getValueFlags('user4', TestLexicon_UserIndexed::APPID, 'key1'));
 	}
 
-	public function testAppConfigLexiconPresets() {
-		$this->configManager->setLexiconPreset(Preset::MEDIUM);
-		$this->assertSame('club+medium', $this->appConfig->getValueString(TestLexicon_E::APPID, 'key3'));
-		$this->configManager->setLexiconPreset(Preset::FAMILY);
-		$this->assertSame('family', $this->appConfig->getValueString(TestLexicon_E::APPID, 'key3'));
-	}
+	public function testLexiconIndexedUpdateRemove() {
+		$this->userConfig->setValueString('user1', TestLexicon_UserIndexedRemove::APPID, 'key1', 'abcd');
+		$this->userConfig->setValueString('user2', TestLexicon_UserIndexedRemove::APPID, 'key1', '1234', flags: 64);
+		$this->userConfig->setValueString('user3', TestLexicon_UserIndexedRemove::APPID, 'key1', 'qwer', flags: IUserConfig::FLAG_INDEXED);
+		$this->userConfig->setValueString('user4', TestLexicon_UserIndexedRemove::APPID, 'key1', 'uiop', flags: 64 | IUserConfig::FLAG_INDEXED);
 
-	public function testUserConfigLexiconPreset() {
-		$this->configManager->setLexiconPreset(Preset::FAMILY);
-		$this->assertSame('family', $this->userConfig->getValueString('user1', TestLexicon_E::APPID, 'key3'));
-	}
+		$bootstrapCoordinator = Server::get(Coordinator::class);
+		$bootstrapCoordinator->getRegistrationContext()?->registerConfigLexicon(TestLexicon_UserIndexedRemove::APPID, TestLexicon_UserIndexedRemove::class);
+		$this->userConfig->clearCacheAll();
 
-	public function testUserConfigLexiconPresets() {
-		$this->configManager->setLexiconPreset(Preset::MEDIUM);
-		$this->assertSame('club+medium', $this->userConfig->getValueString('user1', TestLexicon_E::APPID, 'key3'));
-		$this->configManager->setLexiconPreset(Preset::FAMILY);
-		$this->assertSame('family', $this->userConfig->getValueString('user1', TestLexicon_E::APPID, 'key3'));
+		$this->configManager->updateLexiconEntries(TestLexicon_UserIndexedRemove::APPID);
+
+		$this->assertFalse($this->userConfig->isIndexed('user1', TestLexicon_UserIndexedRemove::APPID, 'key1'));
+		$this->assertFalse($this->userConfig->isIndexed('user2', TestLexicon_UserIndexedRemove::APPID, 'key1'));
+		$this->assertFalse($this->userConfig->isIndexed('user3', TestLexicon_UserIndexedRemove::APPID, 'key1'));
+		$this->assertFalse($this->userConfig->isIndexed('user4', TestLexicon_UserIndexedRemove::APPID, 'key1'));
+
+		$this->assertSame(0, $this->userConfig->getValueFlags('user1', TestLexicon_UserIndexedRemove::APPID, 'key1'));
+		$this->assertSame(64, $this->userConfig->getValueFlags('user2', TestLexicon_UserIndexedRemove::APPID, 'key1'));
+		$this->assertSame(0, $this->userConfig->getValueFlags('user3', TestLexicon_UserIndexedRemove::APPID, 'key1'));
+		$this->assertSame(64, $this->userConfig->getValueFlags('user4', TestLexicon_UserIndexedRemove::APPID, 'key1'));
 	}
 }

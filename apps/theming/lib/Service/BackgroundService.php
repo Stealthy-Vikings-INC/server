@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2020 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\Theming\Service;
 
 use InvalidArgumentException;
@@ -46,7 +47,7 @@ class BackgroundService {
 	 */
 	public const BACKGROUND_COLOR = 'color';
 
-	public const DEFAULT_BACKGROUND_IMAGE = 'jenna-kim-the-globe.webp';
+	public const DEFAULT_BACKGROUND_IMAGE = 'jo-myoung-hee-fluid.webp';
 
 	/**
 	 * 'attribution': Name, artist and license
@@ -56,9 +57,17 @@ class BackgroundService {
 	 * 'primary_color': Recommended primary color for this theme / image
 	 */
 	public const SHIPPED_BACKGROUNDS = [
+		'jo-myoung-hee-fluid.webp' => [
+			'attribution' => 'Fluid (Jo Myoung Hee - Nextcloud GmbH, CC-BY-SA-4.0)',
+			'description' => 'Abstract background picture of blue and white fluids',
+			'attribution_url' => 'https://nextcloud.com/trademarks/',
+			'dark_variant' => 'jo-myoung-hee-fluid-dark.webp',
+			'background_color' => self::DEFAULT_BACKGROUND_COLOR,
+			'primary_color' => self::DEFAULT_COLOR,
+		],
 		'jenna-kim-the-globe.webp' => [
 			'attribution' => 'Globe (Jenna Kim - Nextcloud GmbH, CC-BY-SA-4.0)',
-			'description' => 'Background picture of white clouds on in front of a blue sky',
+			'description' => 'Background picture of an abstract globe shown from the space',
 			'attribution_url' => 'https://nextcloud.com/trademarks/',
 			'dark_variant' => 'jenna-kim-the-globe-dark.webp',
 			'background_color' => self::DEFAULT_BACKGROUND_COLOR,

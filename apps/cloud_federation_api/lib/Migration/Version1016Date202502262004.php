@@ -12,9 +12,11 @@ namespace OCA\CloudFederationAPI\Migration;
 use Closure;
 use OCP\DB\ISchemaWrapper;
 use OCP\DB\Types;
+use OCP\Migration\Attributes\CreateTable;
 use OCP\Migration\IOutput;
 use OCP\Migration\SimpleMigrationStep;
 
+#[CreateTable(table: 'federated_invites', columns: ['id', 'user_id', 'recipient_provider', 'recipient_user_id', 'recipient_name', 'recipient_email', 'token', 'accepted', 'created_at', 'expired_at', 'accepted_at'], description: 'Supporting the OCM Invitation Flow feature')]
 class Version1016Date202502262004 extends SimpleMigrationStep {
 	/**
 	 * @param IOutput $output
@@ -22,6 +24,7 @@ class Version1016Date202502262004 extends SimpleMigrationStep {
 	 * @param array $options
 	 * @return null|ISchemaWrapper
 	 */
+	#[\Override]
 	public function changeSchema(IOutput $output, Closure $schemaClosure, array $options) {
 		/** @var ISchemaWrapper $schema */
 		$schema = $schemaClosure();
@@ -38,7 +41,6 @@ class Version1016Date202502262004 extends SimpleMigrationStep {
 			$table->addColumn('user_id', Types::STRING, [
 				'notnull' => true,
 				'length' => 64,
-
 			]);
 			// https://saturncloud.io/blog/what-is-the-maximum-length-of-a-url-in-different-browsers/#maximum-url-length-in-different-browsers
 			// We use the least common denominator, the minimum length supported by browsers

@@ -12,7 +12,6 @@ OC.L10N.register(
     "Confirm permanent deletion" : "Bevestig permanente verwijdering",
     "Are you sure you want to permanently delete all files and folders in the trash? This cannot be undone." : "Weet je zeker dat je parmanent alle bestanden en mappen in de prullenbak wilt verwijderen? Dit kan niet ongedaan worden gemaakt.",
     "Cancel" : "Annuleren",
-    "Deletion cancelled" : "Verwijdering geannuleerd",
     "Original location" : "Originele locatie",
     "Deleted by" : "Verwijderd door",
     "Deleted" : "Verwijderd",

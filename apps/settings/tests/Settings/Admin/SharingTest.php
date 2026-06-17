@@ -4,6 +4,7 @@
  * SPDX-FileCopyrightText: 2016 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\Settings\Tests\Settings\Admin;
 
 use OCA\Settings\Settings\Admin\Sharing;
@@ -16,9 +17,11 @@ use OCP\IConfig;
 use OCP\IL10N;
 use OCP\IURLGenerator;
 use OCP\Share\IManager;
+use PHPUnit\Framework\Attributes\Group;
 use PHPUnit\Framework\MockObject\MockObject;
 use Test\TestCase;
 
+#[Group(name: 'DB')]
 class SharingTest extends TestCase {
 	private Sharing $admin;
 
@@ -57,7 +60,10 @@ class SharingTest extends TestCase {
 		$this->appConfig
 			->method('getValueBool')
 			->willReturnMap([
-				['core', 'shareapi_allow_federation_on_public_shares', false, false, true],
+				['core', 'shareapi_allow_federation_on_public_shares', true],
+				['core', 'shareapi_enable_link_password_by_default', true],
+				['core', 'shareapi_default_expire_date', false],
+				['core', 'shareapi_enforce_expire_date', false],
 			]);
 
 		$this->config
@@ -73,16 +79,14 @@ class SharingTest extends TestCase {
 				['core', 'shareapi_restrict_user_enumeration_to_group', 'no', 'no'],
 				['core', 'shareapi_restrict_user_enumeration_to_phone', 'no', 'no'],
 				['core', 'shareapi_restrict_user_enumeration_full_match', 'yes', 'yes'],
-				['core', 'shareapi_restrict_user_enumeration_full_match_userid', 'yes', 'yes'],
+				['core', 'shareapi_restrict_user_enumeration_full_match_user_id', 'yes', 'yes'],
+				['core', 'shareapi_restrict_user_enumeration_full_match_displayname', 'yes', 'yes'],
 				['core', 'shareapi_restrict_user_enumeration_full_match_email', 'yes', 'yes'],
 				['core', 'shareapi_restrict_user_enumeration_full_match_ignore_second_dn', 'no', 'no'],
 				['core', 'shareapi_enabled', 'yes', 'yes'],
-				['core', 'shareapi_default_expire_date', 'no', 'no'],
 				['core', 'shareapi_expire_after_n_days', '7', '7'],
-				['core', 'shareapi_enforce_expire_date', 'no', 'no'],
 				['core', 'shareapi_exclude_groups', 'no', 'no'],
 				['core', 'shareapi_public_link_disclaimertext', '', 'Lorem ipsum'],
-				['core', 'shareapi_enable_link_password_by_default', 'no', 'yes'],
 				['core', 'shareapi_default_permissions', (string)Constants::PERMISSION_ALL, Constants::PERMISSION_ALL],
 				['core', 'shareapi_default_internal_expire_date', 'no', 'no'],
 				['core', 'shareapi_internal_expire_after_n_days', '7', '7'],
@@ -120,6 +124,7 @@ class SharingTest extends TestCase {
 				'restrictUserEnumerationToPhone' => false,
 				'restrictUserEnumerationFullMatch' => true,
 				'restrictUserEnumerationFullMatchUserId' => true,
+				'restrictUserEnumerationFullMatchDisplayname' => true,
 				'restrictUserEnumerationFullMatchEmail' => true,
 				'restrictUserEnumerationFullMatchIgnoreSecondDN' => false,
 				'enforceLinksPassword' => false,
@@ -171,7 +176,8 @@ class SharingTest extends TestCase {
 				['core', 'shareapi_restrict_user_enumeration_to_group', 'no', 'no'],
 				['core', 'shareapi_restrict_user_enumeration_to_phone', 'no', 'no'],
 				['core', 'shareapi_restrict_user_enumeration_full_match', 'yes', 'yes'],
-				['core', 'shareapi_restrict_user_enumeration_full_match_userid', 'yes', 'yes'],
+				['core', 'shareapi_restrict_user_enumeration_full_match_user_id', 'yes', 'yes'],
+				['core', 'shareapi_restrict_user_enumeration_full_match_displayname', 'yes', 'yes'],
 				['core', 'shareapi_restrict_user_enumeration_full_match_email', 'yes', 'yes'],
 				['core', 'shareapi_restrict_user_enumeration_full_match_ignore_second_dn', 'no', 'no'],
 				['core', 'shareapi_enabled', 'yes', 'yes'],
@@ -217,6 +223,7 @@ class SharingTest extends TestCase {
 				'restrictUserEnumerationToPhone' => false,
 				'restrictUserEnumerationFullMatch' => true,
 				'restrictUserEnumerationFullMatchUserId' => true,
+				'restrictUserEnumerationFullMatchDisplayname' => true,
 				'restrictUserEnumerationFullMatchEmail' => true,
 				'restrictUserEnumerationFullMatchIgnoreSecondDN' => false,
 				'enforceLinksPassword' => false,

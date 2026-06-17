@@ -5,9 +5,9 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCP\BackgroundJob;
 
-use OCP\ILogger;
 use OCP\Server;
 use Psr\Log\LoggerInterface;
 
@@ -16,6 +16,8 @@ use Psr\Log\LoggerInterface;
  * Call setInterval with your desired interval in seconds from the constructor.
  *
  * @since 15.0.0
+ * @since 25.0.0 deprecated `execute()` method in favor of `start()`
+ * @since 33.0.0 removed deprecated `execute()` method
  */
 abstract class TimedJob extends Job {
 	protected int $interval = 0;
@@ -28,7 +30,7 @@ abstract class TimedJob extends Job {
 	 *
 	 * @since 15.0.0
 	 */
-	public function setInterval(int $seconds) {
+	public function setInterval(int $seconds): void {
 		$this->interval = $seconds;
 	}
 
@@ -74,21 +76,9 @@ abstract class TimedJob extends Job {
 	/**
 	 * Run the job if the last run is more than the interval ago
 	 *
-	 * @param IJobList $jobList
-	 * @param ILogger|null $logger
-	 *
-	 * @since 15.0.0
-	 * @deprecated 25.0.0 Use start() instead
-	 */
-	final public function execute(IJobList $jobList, ?ILogger $logger = null) {
-		$this->start($jobList);
-	}
-
-	/**
-	 * Run the job if the last run is more than the interval ago
-	 *
 	 * @since 25.0.0
 	 */
+	#[\Override]
 	final public function start(IJobList $jobList): void {
 		if (($this->time->getTime() - $this->lastRun) > $this->interval) {
 			if ($this->interval >= 12 * 60 * 60 && $this->isTimeSensitive()) {

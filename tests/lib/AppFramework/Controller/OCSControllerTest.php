@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -17,7 +19,6 @@ use OCP\IRequestId;
 
 class ChildOCSController extends OCSController {
 }
-
 
 class OCSControllerTest extends \Test\TestCase {
 	public function testCors(): void {
@@ -43,7 +44,6 @@ class OCSControllerTest extends \Test\TestCase {
 		$this->assertEquals('false', $headers['Access-Control-Allow-Credentials']);
 		$this->assertEquals(100, $headers['Access-Control-Max-Age']);
 	}
-
 
 	public function testXML(): void {
 		$controller = new ChildOCSController('app', new Request(

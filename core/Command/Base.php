@@ -5,9 +5,12 @@
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OC\Core\Command;
 
 use OC\Core\Command\User\ListCommand;
+use OCP\Defaults;
+use OCP\Server;
 use Stecman\Component\Symfony\Console\BashCompletion\Completion\CompletionAwareInterface;
 use Stecman\Component\Symfony\Console\BashCompletion\CompletionContext;
 use Symfony\Component\Console\Command\Command;
@@ -25,8 +28,12 @@ class Base extends Command implements CompletionAwareInterface {
 	private bool $php_pcntl_signal = false;
 	private bool $interrupted = false;
 
+	#[\Override]
 	protected function configure() {
+		// Some of our commands do not extend this class; and some of those that do do not call parent::configure()
+		$defaultHelp = 'More extensive and thorough documentation may be found at ' . Server::get(Defaults::class)->getDocBaseUrl() . PHP_EOL;
 		$this
+			->setHelp($defaultHelp)
 			->addOption(
 				'output',
 				null,
@@ -140,7 +147,6 @@ class Base extends Command implements CompletionAwareInterface {
 		}
 	}
 
-
 	/**
 	 * @param mixed $item
 	 */
@@ -203,6 +209,7 @@ class Base extends Command implements CompletionAwareInterface {
 		$this->interrupted = true;
 	}
 
+	#[\Override]
 	public function run(InputInterface $input, OutputInterface $output): int {
 		// check if the php pcntl_signal functions are accessible
 		$this->php_pcntl_signal = function_exists('pcntl_signal');
@@ -220,6 +227,7 @@ class Base extends Command implements CompletionAwareInterface {
 	 * @param CompletionContext $context
 	 * @return string[]
 	 */
+	#[\Override]
 	public function completeOptionValues($optionName, CompletionContext $context) {
 		if ($optionName === 'output') {
 			return ['plain', 'json', 'json_pretty'];
@@ -232,6 +240,7 @@ class Base extends Command implements CompletionAwareInterface {
 	 * @param CompletionContext $context
 	 * @return string[]
 	 */
+	#[\Override]
 	public function completeArgumentValues($argumentName, CompletionContext $context) {
 		return [];
 	}

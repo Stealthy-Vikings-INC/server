@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2018 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OC\Avatar;
 
 use OC\NotSquareException;
@@ -17,6 +18,8 @@ use OCP\Files\SimpleFS\ISimpleFolder;
 use OCP\IConfig;
 use OCP\IImage;
 use OCP\IL10N;
+use OCP\Image;
+use OCP\PreConditionNotMetException;
 use Psr\Log\LoggerInterface;
 
 /**
@@ -26,16 +29,17 @@ class UserAvatar extends Avatar {
 	public function __construct(
 		private ISimpleFolder $folder,
 		private IL10N $l,
-		private User $user,
+		protected User $user,
 		LoggerInterface $logger,
-		private IConfig $config,
+		IConfig $config,
 	) {
-		parent::__construct($logger);
+		parent::__construct($config, $logger);
 	}
 
 	/**
 	 * Check if an avatar exists for the user
 	 */
+	#[\Override]
 	public function exists(): bool {
 		return $this->folder->fileExists('avatar.jpg') || $this->folder->fileExists('avatar.png');
 	}
@@ -48,6 +52,7 @@ class UserAvatar extends Avatar {
 	 * @throws \Exception if the provided image is not valid
 	 * @throws NotSquareException if the image is not square
 	 */
+	#[\Override]
 	public function set($data): void {
 		$img = $this->getAvatarImage($data);
 		$data = $img->data();
@@ -80,7 +85,7 @@ class UserAvatar extends Avatar {
 			return $data;
 		}
 
-		$img = new \OCP\Image();
+		$img = new Image();
 		if (
 			(is_resource($data) && get_resource_type($data) === 'gd')
 			|| (is_object($data) && get_class($data) === \GdImage::class)
@@ -145,9 +150,10 @@ class UserAvatar extends Avatar {
 
 	/**
 	 * Removes the users avatar.
-	 * @throws \OCP\Files\NotPermittedException
-	 * @throws \OCP\PreConditionNotMetException
+	 * @throws NotPermittedException
+	 * @throws PreConditionNotMetException
 	 */
+	#[\Override]
 	public function remove(bool $silent = false): void {
 		$avatars = $this->folder->getDirectoryListing();
 
@@ -192,17 +198,19 @@ class UserAvatar extends Avatar {
 	 * If there is no avatar file yet, one is generated.
 	 *
 	 * @throws NotFoundException
-	 * @throws \OCP\Files\NotPermittedException
-	 * @throws \OCP\PreConditionNotMetException
+	 * @throws NotPermittedException
+	 * @throws PreConditionNotMetException
 	 */
+	#[\Override]
 	public function getFile(int $size, bool $darkTheme = false): ISimpleFile {
 		$generated = $this->folder->fileExists('generated');
 
 		try {
 			$ext = $this->getExtension($generated, $darkTheme);
 		} catch (NotFoundException $e) {
-			if (!$data = $this->generateAvatarFromSvg(1024, $darkTheme)) {
-				$data = $this->generateAvatar($this->getDisplayName(), 1024, $darkTheme);
+			$userDisplayName = $this->getDisplayName();
+			if (!$data = $this->generateAvatarFromSvg($userDisplayName, 1024, $darkTheme)) {
+				$data = $this->generateAvatar($userDisplayName, 1024, $darkTheme);
 			}
 			$avatar = $this->folder->newFile($darkTheme ? 'avatar-dark.png' : 'avatar.png');
 			$avatar->putContent($data);
@@ -234,11 +242,12 @@ class UserAvatar extends Avatar {
 				throw new NotFoundException;
 			}
 			if ($generated) {
-				if (!$data = $this->generateAvatarFromSvg($size, $darkTheme)) {
-					$data = $this->generateAvatar($this->getDisplayName(), $size, $darkTheme);
+				$userDisplayName = $this->getDisplayName();
+				if (!$data = $this->generateAvatarFromSvg($userDisplayName, $size, $darkTheme)) {
+					$data = $this->generateAvatar($userDisplayName, $size, $darkTheme);
 				}
 			} else {
-				$avatar = new \OCP\Image();
+				$avatar = new Image();
 				$file = $this->folder->getFile('avatar.' . $ext);
 				$avatar->loadFromData($file->getContent());
 				$avatar->resize($size);
@@ -265,6 +274,7 @@ class UserAvatar extends Avatar {
 	/**
 	 * Returns the user display name.
 	 */
+	#[\Override]
 	public function getDisplayName(): string {
 		return $this->user->getDisplayName();
 	}
@@ -276,8 +286,9 @@ class UserAvatar extends Avatar {
 	 * @param mixed $oldValue The previous value
 	 * @param mixed $newValue The new value
 	 * @throws NotPermittedException
-	 * @throws \OCP\PreConditionNotMetException
+	 * @throws PreConditionNotMetException
 	 */
+	#[\Override]
 	public function userChanged(string $feature, $oldValue, $newValue): void {
 		// If the avatar is not generated (so an uploaded image) we skip this
 		if (!$this->folder->fileExists('generated')) {
@@ -290,7 +301,13 @@ class UserAvatar extends Avatar {
 	/**
 	 * Check if the avatar of a user is a custom uploaded one
 	 */
+	#[\Override]
 	public function isCustomAvatar(): bool {
 		return $this->config->getUserValue($this->user->getUID(), 'avatar', 'generated', 'false') !== 'true';
+	}
+
+	#[\Override]
+	protected function getAvatarLanguage(): string {
+		return $this->config->getUserValue($this->user->getUID(), 'core', 'lang', parent::getAvatarLanguage());
 	}
 }

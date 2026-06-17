@@ -6,19 +6,21 @@
 <template>
 	<div class="sharingTab" :class="{ 'icon-loading': loading }">
 		<!-- error message -->
-		<div v-if="error" class="emptycontent" :class="{ emptyContentWithSections: sections.length > 0 }">
+		<div v-if="error" class="emptycontent" :class="{ emptyContentWithSections: hasExternalSections }">
 			<div class="icon icon-error" />
 			<h2>{{ error }}</h2>
 		</div>
 
 		<!-- shares content -->
-		<div v-show="!showSharingDetailsView"
+		<div
+			v-show="!showSharingDetailsView"
 			class="sharingTab__content">
 			<!-- shared with me information -->
 			<ul v-if="isSharedWithMe">
 				<SharingEntrySimple v-bind="sharedWithMe" class="sharing-entry__reshare">
 					<template #avatar>
-						<NcAvatar :user="sharedWithMe.user"
+						<NcAvatar
+							:user="sharedWithMe.user"
 							:display-name="sharedWithMe.displayName"
 							class="sharing-entry__avatar" />
 					</template>
@@ -30,8 +32,9 @@
 					<h4>{{ t('files_sharing', 'Internal shares') }}</h4>
 					<NcPopover popup-role="dialog">
 						<template #trigger>
-							<NcButton class="hint-icon"
-								type="tertiary-no-background"
+							<NcButton
+								class="hint-icon"
+								variant="tertiary-no-background"
 								:aria-label="t('files_sharing', 'Internal shares explanation')">
 								<template #icon>
 									<InfoIcon :size="20" />
@@ -44,7 +47,8 @@
 					</NcPopover>
 				</div>
 				<!-- add new share input -->
-				<SharingInput v-if="!loading"
+				<SharingInput
+					v-if="!loading"
 					:can-reshare="canReshare"
 					:file-info="fileInfo"
 					:link-shares="linkShares"
@@ -54,7 +58,8 @@
 					@open-sharing-details="toggleShareDetailsView" />
 
 				<!-- other shares list -->
-				<SharingList v-if="!loading"
+				<SharingList
+					v-if="!loading"
 					ref="shareList"
 					:shares="shares"
 					:file-info="fileInfo"
@@ -67,13 +72,14 @@
 				<SharingEntryInternal :file-info="fileInfo" />
 			</section>
 
-			<section>
+			<section v-if="config.showExternalSharing">
 				<div class="section-header">
 					<h4>{{ t('files_sharing', 'External shares') }}</h4>
 					<NcPopover popup-role="dialog">
 						<template #trigger>
-							<NcButton class="hint-icon"
-								type="tertiary-no-background"
+							<NcButton
+								class="hint-icon"
+								variant="tertiary-no-background"
 								:aria-label="t('files_sharing', 'External shares explanation')">
 								<template #icon>
 									<InfoIcon :size="20" />
@@ -85,7 +91,8 @@
 						</p>
 					</NcPopover>
 				</div>
-				<SharingInput v-if="!loading"
+				<SharingInput
+					v-if="!loading"
 					:can-reshare="canReshare"
 					:file-info="fileInfo"
 					:link-shares="linkShares"
@@ -95,12 +102,14 @@
 					:shares="shares"
 					@open-sharing-details="toggleShareDetailsView" />
 				<!-- Non link external shares list -->
-				<SharingList v-if="!loading"
+				<SharingList
+					v-if="!loading"
 					:shares="externalShares"
 					:file-info="fileInfo"
 					@open-sharing-details="toggleShareDetailsView" />
 				<!-- link shares list -->
-				<SharingLinkList v-if="!loading && isLinkSharingAllowed"
+				<SharingLinkList
+					v-if="!loading && isLinkSharingAllowed"
 					ref="linkShareList"
 					:can-reshare="canReshare"
 					:file-info="fileInfo"
@@ -108,13 +117,14 @@
 					@open-sharing-details="toggleShareDetailsView" />
 			</section>
 
-			<section v-if="sections.length > 0 && !showSharingDetailsView">
+			<section v-if="hasExternalSections && !showSharingDetailsView">
 				<div class="section-header">
 					<h4>{{ t('files_sharing', 'Additional shares') }}</h4>
 					<NcPopover popup-role="dialog">
 						<template #trigger>
-							<NcButton class="hint-icon"
-								type="tertiary-no-background"
+							<NcButton
+								class="hint-icon"
+								variant="tertiary-no-background"
 								:aria-label="t('files_sharing', 'Additional shares explanation')">
 								<template #icon>
 									<InfoIcon :size="20" />
@@ -127,18 +137,28 @@
 					</NcPopover>
 				</div>
 				<!-- additional entries, use it with cautious -->
-				<div v-for="(section, index) in sections"
-					:ref="'section-' + index"
+				<SidebarTabExternalSection
+					v-for="section in sortedExternalSections"
+					:key="section.id"
+					:section="section"
+					:node="fileInfo.node /* TODO: Fix once we have proper Node API */"
+					class="sharingTab__additionalContent" />
+
+				<!-- legacy sections: TODO: Remove as soon as possible -->
+				<SidebarTabExternalSectionLegacy
+					v-for="(section, index) in legacySections"
 					:key="index"
-					class="sharingTab__additionalContent">
-					<component :is="section($refs['section-'+index], fileInfo)" :file-info="fileInfo" />
-				</div>
+					:file-info="fileInfo"
+					:section-callback="section"
+					class="sharingTab__additionalContent" />
 
 				<!-- projects (deprecated as of NC25 (replaced by related_resources) - see instance config "projects.enabled" ; ignore this / remove it / move into own section) -->
-				<div v-if="projectsEnabled"
+				<div
+					v-if="projectsEnabled"
 					v-show="!showSharingDetailsView && fileInfo"
 					class="sharingTab__additionalContent">
-					<NcCollectionList :id="`${fileInfo.id}`"
+					<NcCollectionList
+						:id="`${fileInfo.id}`"
 						type="file"
 						:name="fileInfo.name" />
 				</div>
@@ -146,7 +166,8 @@
 		</div>
 
 		<!-- share details -->
-		<SharingDetailsTab v-if="showSharingDetailsView"
+		<SharingDetailsTab
+			v-if="showSharingDetailsView"
 			:file-info="shareDetailsData.fileInfo"
 			:share="shareDetailsData.share"
 			@close-sharing-details="toggleShareDetailsView"
@@ -157,36 +178,35 @@
 
 <script>
 import { getCurrentUser } from '@nextcloud/auth'
+import axios from '@nextcloud/axios'
 import { getCapabilities } from '@nextcloud/capabilities'
 import { orderBy } from '@nextcloud/files'
 import { loadState } from '@nextcloud/initial-state'
+import moment from '@nextcloud/moment'
 import { generateOcsUrl } from '@nextcloud/router'
 import { ShareType } from '@nextcloud/sharing'
-
+import { getSidebarSections } from '@nextcloud/sharing/ui'
 import NcAvatar from '@nextcloud/vue/components/NcAvatar'
 import NcButton from '@nextcloud/vue/components/NcButton'
 import NcCollectionList from '@nextcloud/vue/components/NcCollectionList'
 import NcPopover from '@nextcloud/vue/components/NcPopover'
 import InfoIcon from 'vue-material-design-icons/InformationOutline.vue'
-
-import axios from '@nextcloud/axios'
-import moment from '@nextcloud/moment'
-
-import { shareWithTitle } from '../utils/SharedWithMe.js'
-
-import Config from '../services/ConfigService.ts'
-import Share from '../models/Share.ts'
 import SharingEntryInternal from '../components/SharingEntryInternal.vue'
 import SharingEntrySimple from '../components/SharingEntrySimple.vue'
 import SharingInput from '../components/SharingInput.vue'
-
+import SidebarTabExternalSection from '../components/SidebarTabExternal/SidebarTabExternalSection.vue'
+import SidebarTabExternalSectionLegacy from '../components/SidebarTabExternal/SidebarTabExternalSectionLegacy.vue'
+import SharingDetailsTab from './SharingDetailsTab.vue'
 import SharingInherited from './SharingInherited.vue'
 import SharingLinkList from './SharingLinkList.vue'
 import SharingList from './SharingList.vue'
-import SharingDetailsTab from './SharingDetailsTab.vue'
-
 import ShareDetails from '../mixins/ShareDetails.js'
+import Share from '../models/Share.ts'
+import Config from '../services/ConfigService.ts'
 import logger from '../services/logger.ts'
+import { shareWithTitle } from '../utils/SharedWithMe.js'
+
+const productName = window.OC.theme.productName
 
 export default {
 	name: 'SharingTab',
@@ -204,8 +224,18 @@ export default {
 		SharingLinkList,
 		SharingList,
 		SharingDetailsTab,
+		SidebarTabExternalSection,
+		SidebarTabExternalSectionLegacy,
 	},
+
 	mixins: [ShareDetails],
+
+	props: {
+		fileInfo: {
+			type: Object,
+			required: true,
+		},
+	},
 
 	data() {
 		return {
@@ -215,8 +245,6 @@ export default {
 			expirationInterval: null,
 			loading: true,
 
-			fileInfo: null,
-
 			// reshare Share object
 			reshare: null,
 			sharedWithMe: {},
@@ -224,27 +252,43 @@ export default {
 			linkShares: [],
 			externalShares: [],
 
-			sections: OCA.Sharing.ShareTabSections.getSections(),
+			legacySections: OCA.Sharing.ShareTabSections.getSections(),
+			sections: getSidebarSections(),
+
 			projectsEnabled: loadState('core', 'projects_enabled', false),
 			showSharingDetailsView: false,
 			shareDetailsData: {},
 			returnFocusElement: null,
 
-			internalSharesHelpText: t('files_sharing', 'Use this method to share files with individuals or teams within your organization. If the recipient already has access to the share but cannot locate it, you can send them the internal share link for easy access.'),
-			externalSharesHelpText: t('files_sharing', 'Use this method to share files with individuals or organizations outside your organization. Files and folders can be shared via public share links and email addresses. You can also share to other Nextcloud accounts hosted on different instances using their federated cloud ID.'),
-			additionalSharesHelpText: t('files_sharing', 'Shares that are not part of the internal or external shares. This can be shares from apps or other sources.'),
+			internalSharesHelpText: t('files_sharing', 'Share files within your organization. Recipients who can already view the file can also use this link for easy access.'),
+			externalSharesHelpText: t('files_sharing', 'Share files with others outside your organization via public links and email addresses. You can also share to {productName} accounts on other instances using their federated cloud ID.', { productName }),
+			additionalSharesHelpText: t('files_sharing', 'Shares from apps or other sources which are not included in internal or external shares.'),
 		}
 	},
 
 	computed: {
+		/**
+		 * Are any sections registered by other apps.
+		 *
+		 * @return {boolean}
+		 */
+		hasExternalSections() {
+			return this.sections.length > 0 || this.legacySections.length > 0
+		},
+
+		sortedExternalSections() {
+			return this.sections
+				.filter((section) => section.enabled(this.fileInfo.node))
+				.sort((a, b) => a.order - b.order)
+		},
+
 		/**
 		 * Is this share shared with me?
 		 *
 		 * @return {boolean}
 		 */
 		isSharedWithMe() {
-			return this.sharedWithMe !== null
-				&& this.sharedWithMe !== undefined
+			return !!this.sharedWithMe?.user
 		},
 
 		/**
@@ -269,33 +313,39 @@ export default {
 		},
 
 		internalShareInputPlaceholder() {
-			return this.config.showFederatedSharesAsInternal
-				? t('files_sharing', 'Share with accounts, teams, federated cloud IDs')
-				: t('files_sharing', 'Share with accounts and teams')
+			return this.config.showFederatedSharesAsInternal && this.config.isFederationEnabled
+				// TRANSLATORS: Type as in with a keyboard
+				? t('files_sharing', 'Type names, teams, federated cloud IDs')
+				// TRANSLATORS: Type as in with a keyboard
+				: t('files_sharing', 'Type names or teams')
 		},
 
 		externalShareInputPlaceholder() {
 			if (!this.isLinkSharingAllowed) {
-				return t('files_sharing', 'Federated cloud ID')
+				// TRANSLATORS: Type as in with a keyboard
+				return this.config.isFederationEnabled ? t('files_sharing', 'Type a federated cloud ID') : ''
 			}
-			return this.config.showFederatedSharesAsInternal
-				? t('files_sharing', 'Email')
-				: t('files_sharing', 'Email, federated cloud ID')
+			return !this.config.showFederatedSharesAsInternal && !this.config.isFederationEnabled
+				// TRANSLATORS: Type as in with a keyboard
+				? t('files_sharing', 'Type an email')
+				// TRANSLATORS: Type as in with a keyboard
+				: t('files_sharing', 'Type an email or federated cloud ID')
+		},
+	},
+
+	watch: {
+		fileInfo: {
+			immediate: true,
+			handler(newValue, oldValue) {
+				if (oldValue?.id === undefined || oldValue?.id !== newValue?.id) {
+					this.resetState()
+					this.getShares()
+				}
+			},
 		},
 	},
 
 	methods: {
-		/**
-		 * Update current fileInfo and fetch new data
-		 *
-		 * @param {object} fileInfo the current file FileInfo
-		 */
-		async update(fileInfo) {
-			this.fileInfo = fileInfo
-			this.resetState()
-			this.getShares()
-		},
-
 		/**
 		 * Get the existing shares infos
 		 */
@@ -339,7 +389,7 @@ export default {
 					this.error = t('files_sharing', 'Unable to load the shares list')
 				}
 				this.loading = false
-				console.error('Error loading the shares list', error)
+				logger.error('Error loading the shares list', error)
 			}
 		},
 
@@ -353,6 +403,7 @@ export default {
 			this.sharedWithMe = {}
 			this.shares = []
 			this.linkShares = []
+			this.externalShares = []
 			this.showSharingDetailsView = false
 			this.shareDetailsData = {}
 		},
@@ -387,7 +438,7 @@ export default {
 		processShares({ data }) {
 			if (data.ocs && data.ocs.data && data.ocs.data.length > 0) {
 				const shares = orderBy(
-					data.ocs.data.map(share => new Share(share)),
+					data.ocs.data.map((share) => new Share(share)),
 					[
 						// First order by the "share with" label
 						(share) => share.shareWithDisplayName,
@@ -399,23 +450,8 @@ export default {
 				)
 
 				for (const share of shares) {
-					if ([ShareType.Link, ShareType.Email].includes(share.type)) {
-						this.linkShares.push(share)
-					} else if ([ShareType.Remote, ShareType.RemoteGroup].includes(share.type)) {
-						if (this.config.showFederatedSharesToTrustedServersAsInternal) {
-							if (share.isTrustedServer) {
-								this.shares.push(share)
-							} else {
-								this.externalShares.push(share)
-							}
-						} else if (this.config.showFederatedSharesAsInternal) {
-							this.shares.push(share)
-						} else {
-							this.externalShares.push(share)
-						}
-					} else {
-						this.shares.push(share)
-					}
+					const shareList = this.findShareListByShare(share)
+					shareList.push(share)
 				}
 
 				logger.debug(`Processed ${this.linkShares.length} link share(s)`)
@@ -464,6 +500,7 @@ export default {
 						undefined,
 						{ escape: false },
 					),
+
 					user: this.fileInfo.shareOwnerId,
 				}
 			}
@@ -477,42 +514,43 @@ export default {
 		 * @param {Function} [resolve] a function to run after the share is added and its component initialized
 		 */
 		addShare(share, resolve = () => { }) {
-			// only catching share type MAIL as link shares are added differently
-			// meaning: not from the ShareInput
-			if (share.type === ShareType.Email) {
-				this.linkShares.unshift(share)
-			} else if ([ShareType.Remote, ShareType.RemoteGroup].includes(share.type)) {
-				if (this.config.showFederatedSharesAsInternal) {
-					this.shares.unshift(share)
-				} if (this.config.showFederatedSharesToTrustedServersAsInternal) {
-					if (share.isTrustedServer) {
-						this.shares.unshift(share)
-					}
-				} else {
-					this.externalShares.unshift(share)
-				}
-			} else {
-				this.shares.unshift(share)
-			}
+			const shareList = this.findShareListByShare(share)
+			shareList.unshift(share)
 			this.awaitForShare(share, resolve)
 		},
+
 		/**
 		 * Remove a share from the shares list
 		 *
 		 * @param {Share} share the share to remove
 		 */
 		removeShare(share) {
-			// Get reference for this.linkShares or this.shares
-			const shareList
-				= share.type === ShareType.Email
-					|| share.type === ShareType.Link
-					? this.linkShares
-					: this.shares
-			const index = shareList.findIndex(item => item.id === share.id)
+			this.removeShareFromList(this.findShareListByShare(share), share)
+		},
+
+		findShareListByShare(share) {
+			if (share.type === ShareType.Remote || share.type === ShareType.RemoteGroup) {
+				if (this.config.showFederatedSharesToTrustedServersAsInternal) {
+					return share.isTrustedServer ? this.shares : this.externalShares
+				} else if (this.config.showFederatedSharesAsInternal) {
+					return this.shares
+				} else {
+					return this.externalShares
+				}
+			} else if (share.type === ShareType.Email || share.type === ShareType.Link) {
+				return this.linkShares
+			} else {
+				return this.shares
+			}
+		},
+
+		removeShareFromList(shareList, share) {
+			const index = shareList.findIndex((item) => item.id === share.id)
 			if (index !== -1) {
 				shareList.splice(index, 1)
 			}
 		},
+
 		/**
 		 * Await for next tick and render after the list updated
 		 * Then resolve with the matched vue component of the
@@ -529,7 +567,7 @@ export default {
 				if (share.type === ShareType.Email) {
 					listComponent = this.$refs.linkShareList
 				}
-				const newShare = listComponent.$children.find(component => component.share === share)
+				const newShare = listComponent.$children.find((component) => component.share === share)
 				if (newShare) {
 					resolve(newShare)
 				}
@@ -539,7 +577,7 @@ export default {
 		toggleShareDetailsView(eventData) {
 			if (!this.showSharingDetailsView) {
 				const isAction = Array.from(document.activeElement.classList)
-					.some(className => className.startsWith('action-'))
+					.some((className) => className.startsWith('action-'))
 				if (isAction) {
 					const menuId = document.activeElement.closest('[role="menu"]')?.id
 					this.returnFocusElement = document.querySelector(`[aria-controls="${menuId}"]`)
@@ -611,7 +649,7 @@ export default {
 	}
 
 	&__additionalContent {
-		margin: 44px 0;
+		margin: var(--default-clickable-area) 0;
 	}
 }
 

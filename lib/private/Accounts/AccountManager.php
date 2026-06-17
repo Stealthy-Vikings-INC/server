@@ -53,7 +53,6 @@ use function json_last_error;
  */
 class AccountManager implements IAccountManager {
 	use TAccountsHelper;
-
 	use TProfileHelper;
 
 	private string $table = 'accounts';
@@ -78,6 +77,7 @@ class AccountManager implements IAccountManager {
 		self::PROPERTY_PRONOUNS => self::SCOPE_FEDERATED,
 		self::PROPERTY_ROLE => self::SCOPE_LOCAL,
 		self::PROPERTY_TWITTER => self::SCOPE_LOCAL,
+		self::PROPERTY_BLUESKY => self::SCOPE_LOCAL,
 		self::PROPERTY_WEBSITE => self::SCOPE_LOCAL,
 	];
 
@@ -131,7 +131,9 @@ class AccountManager implements IAccountManager {
 				$property->setScope(self::SCOPE_LOCAL);
 			}
 		} else {
-			$property->setScope($property->getScope());
+			// migrate scope values to the new format
+			// invalid scopes are mapped to a default value
+			$property->setScope(AccountProperty::mapScopeToV2($property->getScope()));
 		}
 	}
 
@@ -213,6 +215,7 @@ class AccountManager implements IAccountManager {
 		return $this->addMissingDefaultValues($userDataArray, $this->buildDefaultUserRecord($user));
 	}
 
+	#[\Override]
 	public function searchUsers(string $property, array $values): array {
 		// the value col is limited to 255 bytes. It is used for searches only.
 		$values = array_map(function (string $value) {
@@ -351,7 +354,7 @@ class AccountManager implements IAccountManager {
 	protected function addMissingDefaultValues(array $userData, array $defaultUserData): array {
 		foreach ($defaultUserData as $defaultDataItem) {
 			// If property does not exist, initialize it
-			$userDataIndex = array_search($defaultDataItem['name'], array_column($userData, 'name'));
+			$userDataIndex = array_search($defaultDataItem['name'], array_column($userData, 'name'), true);
 			if ($userDataIndex === false) {
 				$userData[] = $defaultDataItem;
 				continue;
@@ -365,7 +368,7 @@ class AccountManager implements IAccountManager {
 	}
 
 	protected function updateVerificationStatus(IAccount $updatedAccount, array $oldData): void {
-		static $propertiesVerifiableByLookupServer = [
+		$propertiesVerifiableByLookupServer = [
 			self::PROPERTY_TWITTER,
 			self::PROPERTY_FEDIVERSE,
 			self::PROPERTY_WEBSITE,
@@ -564,6 +567,13 @@ class AccountManager implements IAccountManager {
 			],
 
 			[
+				'name' => self::PROPERTY_BLUESKY,
+				'value' => '',
+				'scope' => $scopes[self::PROPERTY_BLUESKY],
+				'verified' => self::NOT_VERIFIED,
+			],
+
+			[
 				'name' => self::PROPERTY_FEDIVERSE,
 				'value' => '',
 				'scope' => $scopes[self::PROPERTY_FEDIVERSE],
@@ -645,6 +655,7 @@ class AccountManager implements IAccountManager {
 		return $account;
 	}
 
+	#[\Override]
 	public function getAccount(IUser $user): IAccount {
 		$cached = $this->internalCache->get($user->getUID());
 		if ($cached !== null) {
@@ -713,6 +724,46 @@ class AccountManager implements IAccountManager {
 		}
 	}
 
+	private function validateBlueSkyHandle(string $text): bool {
+		if ($text === '') {
+			return true;
+		}
+
+		$lowerText = strtolower($text);
+
+		if ($lowerText === 'bsky.social') {
+			// "bsky.social" itself is not a valid handle
+			return false;
+		}
+
+		if (str_ends_with($lowerText, '.bsky.social')) {
+			$parts = explode('.', $lowerText);
+
+			// Must be exactly: username.bsky.social → 3 parts
+			if (count($parts) !== 3 || $parts[1] !== 'bsky' || $parts[2] !== 'social') {
+				return false;
+			}
+
+			$username = $parts[0];
+
+			// Must be 3–18 chars, alphanumeric/hyphen, no start/end hyphen
+			return preg_match('/^[a-z0-9][a-z0-9-]{2,17}$/', $username) === 1;
+		}
+
+		// Allow custom domains (Bluesky handle via personal domain)
+		return filter_var($text, FILTER_VALIDATE_DOMAIN, FILTER_FLAG_HOSTNAME) !== false;
+	}
+
+	private function sanitizePropertyBluesky(IAccountProperty $property): void {
+		if ($property->getName() === self::PROPERTY_BLUESKY) {
+			if (!$this->validateBlueSkyHandle($property->getValue())) {
+				throw new InvalidArgumentException(self::PROPERTY_BLUESKY);
+			}
+
+			$property->setValue($property->getValue());
+		}
+	}
+
 	/**
 	 * @throws InvalidArgumentException If the property value is not a valid fediverse handle (username@instance where instance is a valid domain)
 	 */
@@ -775,6 +826,7 @@ class AccountManager implements IAccountManager {
 		}
 	}
 
+	#[\Override]
 	public function updateAccount(IAccount $account): void {
 		$this->testValueLengths(iterator_to_array($account->getAllProperties()), true);
 		try {
@@ -799,6 +851,15 @@ class AccountManager implements IAccountManager {
 			$property = $account->getProperty(self::PROPERTY_TWITTER);
 			if ($property->getValue() !== '') {
 				$this->sanitizePropertyTwitter($property);
+			}
+		} catch (PropertyDoesNotExistException $e) {
+			//  valid case, nothing to do
+		}
+
+		try {
+			$property = $account->getProperty(self::PROPERTY_BLUESKY);
+			if ($property->getValue() !== '') {
+				$this->sanitizePropertyBluesky($property);
 			}
 		} catch (PropertyDoesNotExistException $e) {
 			//  valid case, nothing to do

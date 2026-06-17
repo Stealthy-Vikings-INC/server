@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /**
  * SPDX-FileCopyrightText: 2016-2024 Nextcloud GmbH and Nextcloud contributors
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
@@ -20,12 +22,11 @@ use OCP\IConfig;
 use OCP\IRequestId;
 use PHPUnit\Framework\MockObject\MockObject;
 
-/**
- * @group DB
- */
+#[\PHPUnit\Framework\Attributes\Group('DB')]
 class DIContainerTest extends \Test\TestCase {
 	private DIContainer&MockObject $container;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 		$this->container = $this->getMockBuilder(DIContainer::class)
@@ -33,7 +34,6 @@ class DIContainerTest extends \Test\TestCase {
 			->setConstructorArgs(['name'])
 			->getMock();
 	}
-
 
 	public function testProvidesRequest(): void {
 		$this->assertTrue(isset($this->container['Request']));
@@ -47,7 +47,6 @@ class DIContainerTest extends \Test\TestCase {
 		$this->assertTrue(isset($this->container['AppName']));
 		$this->assertTrue(isset($this->container['appName']));
 	}
-
 
 	public function testAppNameIsSetCorrectly(): void {
 		$this->assertEquals('name', $this->container['AppName']);

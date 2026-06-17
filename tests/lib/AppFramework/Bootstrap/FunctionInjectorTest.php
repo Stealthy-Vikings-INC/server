@@ -11,16 +11,16 @@ namespace lib\AppFramework\Bootstrap;
 
 use OC\AppFramework\Bootstrap\FunctionInjector;
 use OC\AppFramework\Utility\SimpleContainer;
-use OCP\AppFramework\QueryException;
+use Psr\Container\ContainerExceptionInterface;
 use Test\TestCase;
 
 interface Foo {
 }
 
 class FunctionInjectorTest extends TestCase {
-	/** @var SimpleContainer */
-	private $container;
+	private SimpleContainer $container;
 
+	#[\Override]
 	protected function setUp(): void {
 		parent::setUp();
 
@@ -28,7 +28,7 @@ class FunctionInjectorTest extends TestCase {
 	}
 
 	public function testInjectFnNotRegistered(): void {
-		$this->expectException(QueryException::class);
+		$this->expectException(ContainerExceptionInterface::class);
 
 		(new FunctionInjector($this->container))->injectFn(static function (Foo $p1): void {
 		});

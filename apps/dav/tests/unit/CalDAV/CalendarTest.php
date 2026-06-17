@@ -6,6 +6,7 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2016 ownCloud, Inc.
  * SPDX-License-Identifier: AGPL-3.0-only
  */
+
 namespace OCA\DAV\Tests\unit\CalDAV;
 
 use OCA\DAV\CalDAV\BirthdayService;
@@ -54,7 +55,6 @@ class CalendarTest extends TestCase {
 		$c = new Calendar($backend, $calendarInfo, $this->l10n, $this->config, $this->logger);
 		$c->delete();
 	}
-
 
 	public function testDeleteFromGroup(): void {
 		/** @var CalDavBackend&MockObject $backend */
@@ -144,7 +144,7 @@ class CalendarTest extends TestCase {
 		];
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('dataPropPatch')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'dataPropPatch')]
 	public function testPropPatch(string $ownerPrincipal, string $principalUri, array $mutations, bool $shared): void {
 		/** @var CalDavBackend&MockObject $backend */
 		$backend = $this->createMock(CalDavBackend::class);
@@ -166,7 +166,7 @@ class CalendarTest extends TestCase {
 		$this->addToAssertionCount(1);
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('providesReadOnlyInfo')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'providesReadOnlyInfo')]
 	public function testAcl($expectsWrite, $readOnlyValue, $hasOwnerSet, $uri = 'default'): void {
 		/** @var CalDavBackend&MockObject $backend */
 		$backend = $this->createMock(CalDavBackend::class);
@@ -236,16 +236,36 @@ class CalendarTest extends TestCase {
 				'principal' => 'user2',
 				'protected' => true
 			];
+			$expectedAcl[] = [
+				'privilege' => '{DAV:}read',
+				'principal' => 'user2/calendar-proxy-read',
+				'protected' => true
+			];
+			$expectedAcl[] = [
+				'privilege' => '{DAV:}read',
+				'principal' => 'user2/calendar-proxy-write',
+				'protected' => true
+			];
 			if ($expectsWrite) {
 				$expectedAcl[] = [
 					'privilege' => '{DAV:}write',
 					'principal' => 'user2',
 					'protected' => true
 				];
+				$expectedAcl[] = [
+					'privilege' => '{DAV:}write',
+					'principal' => 'user2/calendar-proxy-write',
+					'protected' => true
+				];
 			} else {
 				$expectedAcl[] = [
 					'privilege' => '{DAV:}write-properties',
 					'principal' => 'user2',
+					'protected' => true
+				];
+				$expectedAcl[] = [
+					'privilege' => '{DAV:}write-properties',
+					'principal' => 'user2/calendar-proxy-write',
 					'protected' => true
 				];
 			}
@@ -266,7 +286,7 @@ class CalendarTest extends TestCase {
 		];
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('providesConfidentialClassificationData')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'providesConfidentialClassificationData')]
 	public function testPrivateClassification(int $expectedChildren, bool $isShared): void {
 		$calObject0 = ['uri' => 'event-0', 'classification' => CalDavBackend::CLASSIFICATION_PUBLIC];
 		$calObject1 = ['uri' => 'event-1', 'classification' => CalDavBackend::CLASSIFICATION_CONFIDENTIAL];
@@ -297,14 +317,14 @@ class CalendarTest extends TestCase {
 		}
 		$c = new Calendar($backend, $calendarInfo, $this->l10n, $this->config, $this->logger);
 		$children = $c->getChildren();
-		$this->assertEquals($expectedChildren, count($children));
+		$this->assertCount($expectedChildren, $children);
 		$children = $c->getMultipleChildren(['event-0', 'event-1', 'event-2']);
-		$this->assertEquals($expectedChildren, count($children));
+		$this->assertCount($expectedChildren, $children);
 
 		$this->assertEquals(!$isShared, $c->childExists('event-2'));
 	}
 
-	#[\PHPUnit\Framework\Attributes\DataProvider('providesConfidentialClassificationData')]
+	#[\PHPUnit\Framework\Attributes\DataProvider(methodName: 'providesConfidentialClassificationData')]
 	public function testConfidentialClassification(int $expectedChildren, bool $isShared): void {
 		$start = '20160609';
 		$end = '20160610';
@@ -375,9 +395,13 @@ EOD;
 			'id' => 666,
 			'uri' => 'cal',
 		];
+
+		if ($isShared) {
+			$calendarInfo['{http://owncloud.org/ns}read-only'] = true;
+		}
 		$c = new Calendar($backend, $calendarInfo, $this->l10n, $this->config, $this->logger);
 
-		$this->assertEquals(count($c->getChildren()), $expectedChildren);
+		$this->assertCount($expectedChildren, $c->getChildren());
 
 		// test private event
 		$privateEvent = $c->getChild('event-1');
@@ -513,8 +537,6 @@ END:VCALENDAR
 
 EOD;
 
-
-
 		$publicObject = ['uri' => 'event-0',
 			'classification' => CalDavBackend::CLASSIFICATION_PUBLIC,
 			'calendardata' => $publicObjectData];
@@ -540,10 +562,8 @@ EOD;
 				switch ($uri) {
 					case 'event-0':
 						return $publicObject;
-
 					case 'event-1':
 						return $confidentialObject;
-
 					default:
 						throw new \Exception('unexpected uri');
 				}
@@ -582,24 +602,24 @@ EOD;
 		$this->assertCount(2, $roCalendar->getChildren());
 
 		// calendar data shall not be altered for the owner
-		$this->assertEquals($ownerCalendar->getChild('event-0')->get(), $publicObjectData);
-		$this->assertEquals($ownerCalendar->getChild('event-1')->get(), $confidentialObjectData);
+		$this->assertEquals($publicObjectData, $ownerCalendar->getChild('event-0')->get());
+		$this->assertEquals($confidentialObjectData, $ownerCalendar->getChild('event-1')->get());
 
 		// valarms shall not be removed for read-write shares
 		$this->assertEquals(
-			$this->fixLinebreak($rwCalendar->getChild('event-0')->get()),
-			$this->fixLinebreak($publicObjectData));
+			$this->fixLinebreak($publicObjectData),
+			$this->fixLinebreak($rwCalendar->getChild('event-0')->get()));
 		$this->assertEquals(
-			$this->fixLinebreak($rwCalendar->getChild('event-1')->get()),
-			$this->fixLinebreak($confidentialObjectCleaned));
+			$this->fixLinebreak($confidentialObjectData),
+			$this->fixLinebreak($rwCalendar->getChild('event-1')->get()));
 
 		// valarms shall be removed for read-only shares
 		$this->assertEquals(
-			$this->fixLinebreak($roCalendar->getChild('event-0')->get()),
-			$this->fixLinebreak($publicObjectDataWithoutVAlarm));
+			$this->fixLinebreak($publicObjectDataWithoutVAlarm),
+			$this->fixLinebreak($roCalendar->getChild('event-0')->get()));
 		$this->assertEquals(
-			$this->fixLinebreak($roCalendar->getChild('event-1')->get()),
-			$this->fixLinebreak($confidentialObjectCleaned));
+			$this->fixLinebreak($confidentialObjectCleaned),
+			$this->fixLinebreak($roCalendar->getChild('event-1')->get()));
 	}
 
 	private function fixLinebreak(string $str): string {

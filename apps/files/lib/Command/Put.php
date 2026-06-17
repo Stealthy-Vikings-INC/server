@@ -25,6 +25,7 @@ class Put extends Command {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		$this
 			->setName('files:put')
@@ -33,6 +34,7 @@ class Put extends Command {
 			->addArgument('file', InputArgument::REQUIRED, 'Target Nextcloud file path to write to or fileid of existing file');
 	}
 
+	#[\Override]
 	public function execute(InputInterface $input, OutputInterface $output): int {
 		$fileOutput = $input->getArgument('file');
 		$inputName = $input->getArgument('input');
@@ -42,7 +44,7 @@ class Put extends Command {
 			$output->writeln("<error>$fileOutput is a folder</error>");
 			return self::FAILURE;
 		}
-		if (!$node and is_numeric($fileOutput)) {
+		if (!$node && is_numeric($fileOutput)) {
 			$output->writeln("<error>$fileOutput not found</error>");
 			return self::FAILURE;
 		}

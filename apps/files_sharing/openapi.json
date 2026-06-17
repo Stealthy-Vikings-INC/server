@@ -189,6 +189,9 @@
                                 "type": "integer",
                                 "format": "int64"
                             },
+                            "exclude_reshare_from_edit": {
+                                "type": "boolean"
+                            },
                             "federation": {
                                 "type": "object",
                                 "required": [
@@ -231,10 +234,15 @@
                             "sharee": {
                                 "type": "object",
                                 "required": [
+                                    "minSearchStringLength",
                                     "query_lookup_default",
                                     "always_show_unique"
                                 ],
                                 "properties": {
+                                    "minSearchStringLength": {
+                                        "type": "integer",
+                                        "format": "int64"
+                                    },
                                     "query_lookup_default": {
                                         "type": "boolean"
                                     },
@@ -404,11 +412,13 @@
                     "share_token",
                     "share_type",
                     "type",
-                    "user"
+                    "user",
+                    "item_size"
                 ],
                 "properties": {
                     "accepted": {
-                        "type": "boolean"
+                        "type": "integer",
+                        "format": "int64"
                     },
                     "file_id": {
                         "type": "integer",
@@ -416,8 +426,7 @@
                         "nullable": true
                     },
                     "id": {
-                        "type": "integer",
-                        "format": "int64"
+                        "type": "string"
                     },
                     "mimetype": {
                         "type": "string",
@@ -438,8 +447,7 @@
                         "type": "string"
                     },
                     "parent": {
-                        "type": "integer",
-                        "format": "int64",
+                        "type": "string",
                         "nullable": true
                     },
                     "permissions": {
@@ -466,6 +474,19 @@
                     },
                     "user": {
                         "type": "string"
+                    },
+                    "item_size": {
+                        "nullable": true,
+                        "anyOf": [
+                            {
+                                "type": "integer",
+                                "format": "int64"
+                            },
+                            {
+                                "type": "number",
+                                "format": "double"
+                            }
+                        ]
                     }
                 }
             },
@@ -700,7 +721,8 @@
                         "type": "string"
                     },
                     "url": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
                     }
                 }
             },
@@ -1509,12 +1531,8 @@
                         "in": "query",
                         "description": "Whether to not crop the preview",
                         "schema": {
-                            "type": "integer",
-                            "default": 0,
-                            "enum": [
-                                0,
-                                1
-                            ]
+                            "type": "boolean",
+                            "default": false
                         }
                     },
                     {
@@ -1522,12 +1540,8 @@
                         "in": "query",
                         "description": "Whether to fallback to the mime icon if no preview is available",
                         "schema": {
-                            "type": "integer",
-                            "default": 0,
-                            "enum": [
-                                0,
-                                1
-                            ]
+                            "type": "boolean",
+                            "default": false
                         }
                     },
                     {
@@ -1803,6 +1817,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -2036,6 +2078,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -2147,6 +2217,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -2211,6 +2309,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -2245,12 +2371,8 @@
                         "in": "query",
                         "description": "Include tags in the share",
                         "schema": {
-                            "type": "integer",
-                            "default": 0,
-                            "enum": [
-                                0,
-                                1
-                            ]
+                            "type": "boolean",
+                            "default": false
                         }
                     },
                     {
@@ -2300,6 +2422,34 @@
                     },
                     "404": {
                         "description": "Share not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2556,6 +2706,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -2653,6 +2831,34 @@
                     },
                     "403": {
                         "description": "Missing permissions to delete the share",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -2847,6 +3053,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -2971,6 +3205,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3029,6 +3291,34 @@
                                                         "$ref": "#/components/schemas/DeletedShare"
                                                     }
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
                                             }
                                         }
                                     }
@@ -3106,6 +3396,34 @@
                     },
                     "404": {
                         "description": "Share not found",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3217,12 +3535,8 @@
                         "in": "query",
                         "description": "If a global lookup should be performed too",
                         "schema": {
-                            "type": "integer",
-                            "default": 0,
-                            "enum": [
-                                0,
-                                1
-                            ]
+                            "type": "boolean",
+                            "default": false
                         }
                     },
                     {
@@ -3276,6 +3590,34 @@
                     },
                     "400": {
                         "description": "Invalid search parameters",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3393,6 +3735,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3451,6 +3821,34 @@
                                                         "$ref": "#/components/schemas/RemoteShare"
                                                     }
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
                                             }
                                         }
                                     }
@@ -3521,6 +3919,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3528,7 +3954,7 @@
         "/ocs/v2.php/apps/files_sharing/api/v1/remote_shares/pending/{id}": {
             "post": {
                 "operationId": "remote-accept-share",
-                "summary": "Accept a remote share",
+                "summary": "Accept a remote share.",
                 "tags": [
                     "remote"
                 ],
@@ -3547,8 +3973,7 @@
                         "description": "ID of the share",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
+                            "type": "string"
                         }
                     },
                     {
@@ -3618,12 +4043,40 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
             "delete": {
                 "operationId": "remote-decline-share",
-                "summary": "Decline a remote share",
+                "summary": "Decline a remote share.",
                 "tags": [
                     "remote"
                 ],
@@ -3642,8 +4095,7 @@
                         "description": "ID of the share",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
+                            "type": "string"
                         }
                     },
                     {
@@ -3713,6 +4165,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3739,8 +4219,7 @@
                         "description": "ID of the share",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
+                            "type": "string"
                         }
                     },
                     {
@@ -3812,6 +4291,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             },
@@ -3836,8 +4343,7 @@
                         "description": "ID of the share",
                         "required": true,
                         "schema": {
-                            "type": "integer",
-                            "format": "int64"
+                            "type": "string"
                         }
                     },
                     {
@@ -3935,6 +4441,34 @@
                                 }
                             }
                         }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -3998,6 +4532,34 @@
                                                         }
                                                     }
                                                 }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "description": "Current user is not logged in",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "type": "object",
+                                    "required": [
+                                        "ocs"
+                                    ],
+                                    "properties": {
+                                        "ocs": {
+                                            "type": "object",
+                                            "required": [
+                                                "meta",
+                                                "data"
+                                            ],
+                                            "properties": {
+                                                "meta": {
+                                                    "$ref": "#/components/schemas/OCSMeta"
+                                                },
+                                                "data": {}
                                             }
                                         }
                                     }

@@ -6,11 +6,14 @@ declare(strict_types=1);
  * SPDX-FileCopyrightText: 2025 Nextcloud GmbH and Nextcloud contributors
  * SPDX-License-Identifier: AGPL-3.0-or-later
  */
+
 namespace OCA\Files\Command;
 
 use Exception;
 use OC\Core\Command\Base;
 use OC\Files\FilenameValidator;
+use OCA\Files\Service\SettingsService;
+use OCP\AppFramework\Services\IAppConfig;
 use OCP\Files\Folder;
 use OCP\Files\IRootFolder;
 use OCP\Files\NotPermittedException;
@@ -29,6 +32,7 @@ class SanitizeFilenames extends Base {
 	private OutputInterface $output;
 	private ?string $charReplacement;
 	private bool $dryRun;
+	private bool $errorsOrSkipped = false;
 
 	public function __construct(
 		private IUserManager $userManager,
@@ -36,10 +40,13 @@ class SanitizeFilenames extends Base {
 		private IUserSession $session,
 		private IFactory $l10nFactory,
 		private FilenameValidator $filenameValidator,
+		private SettingsService $service,
+		private IAppConfig $appConfig,
 	) {
 		parent::__construct();
 	}
 
+	#[\Override]
 	protected function configure(): void {
 		parent::configure();
 
@@ -65,6 +72,7 @@ class SanitizeFilenames extends Base {
 
 	}
 
+	#[\Override]
 	protected function execute(InputInterface $input, OutputInterface $output): int {
 		$this->charReplacement = $input->getOption('char-replacement');
 		// check if replacement is needed
@@ -100,6 +108,10 @@ class SanitizeFilenames extends Base {
 			}
 		} else {
 			$this->userManager->callForSeenUsers($this->sanitizeUserFiles(...));
+			if ($this->service->hasFilesWindowsSupport() && $this->appConfig->getAppValueInt('sanitize_filenames_status') === 0) {
+				// we are done - if this is for sanitizing all users for windows filename support then set this UI flag
+				$this->appConfig->setAppValueInt('sanitize_filenames_status', SettingsService::STATUS_WCF_DONE);
+			}
 		}
 		return self::SUCCESS;
 	}
